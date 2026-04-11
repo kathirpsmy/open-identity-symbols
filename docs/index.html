@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Open Identity Symbols — A Universal, Privacy-First Identity Protocol</title>
+  <meta name="description" content="OIS is an open standard for generating globally unique, human-readable identities using Unicode symbols. Privacy-first. Decentralization-ready." />
+  <meta property="og:title" content="Open Identity Symbols (OIS)" />
+  <meta property="og:description" content="A universal, Unicode-based identity system. Your identity as three symbols: ⚙-🌊-🔥" />
+  <meta property="og:type" content="website" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0c10;
+      --bg2:       #111318;
+      --bg3:       #181c24;
+      --border:    #1e2330;
+      --accent:    #6c63ff;
+      --accent2:   #00d4aa;
+      --text:      #e8eaf0;
+      --muted:     #8890a4;
+      --card-bg:   #13161f;
+      --radius:    12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 12, 16, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+
+    .nav-logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .nav-logo span { color: var(--accent); }
+
+    .nav-links {
+      display: flex;
+      gap: 1.8rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #fff !important;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: opacity 0.2s !important;
+    }
+
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      padding: 7rem 2rem 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(108,99,255,0.18), transparent);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(108,99,255,0.12);
+      border: 1px solid rgba(108,99,255,0.3);
+      color: #a89fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.9rem;
+      border-radius: 20px;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 1.25rem;
+      max-width: 820px;
+      margin-inline: auto;
+    }
+
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 1.15rem;
+      max-width: 600px;
+      margin: 0 auto 2.5rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.75rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #7b73ff; transform: translateY(-1px); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover { border-color: var(--muted); transform: translateY(-1px); }
+
+    /* ── IDENTITY DEMO ── */
+    .identity-demo {
+      margin: 4rem auto 0;
+      max-width: 480px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      position: relative;
+    }
+
+    .identity-demo::before {
+      content: 'Live Preview';
+      position: absolute;
+      top: -11px;
+      left: 1.5rem;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0 0.5rem;
+    }
+
+    .symbol-display {
+      font-size: 2.8rem;
+      text-align: center;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.75rem;
+      line-height: 1;
+    }
+
+    .alias-display {
+      text-align: center;
+      color: var(--accent2);
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+
+    .demo-meta {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .demo-chip {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      padding: 5rem 2rem;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    h2 {
+      font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    .section-intro {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 640px;
+      margin-bottom: 3rem;
+    }
+
+    /* ── CARDS ── */
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.25rem; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .card:hover { border-color: #2a3050; transform: translateY(-2px); }
+
+    .card-icon {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .card p { color: var(--muted); font-size: 0.92rem; }
+
+    /* ── HOW IT WORKS ── */
+    .steps { display: flex; flex-direction: column; gap: 0; }
+
+    .step {
+      display: flex;
+      gap: 2rem;
+      align-items: flex-start;
+      padding: 2rem 0;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    .step:last-child { border-bottom: none; }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(108,99,255,0.12);
+      border: 1px solid rgba(108,99,255,0.3);
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-content h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .step-content p { color: var(--muted); font-size: 0.92rem; }
+
+    .step-content code {
+      display: inline-block;
+      margin-top: 0.6rem;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.6rem 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 1.1rem;
+      color: var(--accent2);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── ROADMAP ── */
+    .roadmap { display: flex; flex-direction: column; gap: 1rem; }
+
+    .phase {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 1.5rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      align-items: start;
+      transition: border-color 0.2s;
+    }
+
+    .phase:hover { border-color: #2a3050; }
+
+    .phase-label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .phase-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      width: fit-content;
+    }
+
+    .phase-tag.now   { background: rgba(0,212,170,0.12); color: var(--accent2); border: 1px solid rgba(0,212,170,0.25); }
+    .phase-tag.soon  { background: rgba(108,99,255,0.12); color: var(--accent); border: 1px solid rgba(108,99,255,0.25); }
+    .phase-tag.later { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+
+    .phase-name { font-size: 0.8rem; color: var(--muted); }
+
+    .phase-items h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; }
+
+    .phase-items ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .phase-items li {
+      font-size: 0.88rem;
+      color: var(--muted);
+      padding-left: 1.2rem;
+      position: relative;
+    }
+
+    .phase-items li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+
+    /* ── STATS BANNER ── */
+    .stats-banner {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 3rem 2rem;
+    }
+
+    .stats-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label { color: var(--muted); font-size: 0.88rem; margin-top: 0.25rem; }
+
+    /* ── OPEN SOURCE ── */
+    .oss-section {
+      text-align: center;
+      padding: 6rem 2rem;
+    }
+
+    .oss-inner {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .github-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: #fff;
+      color: #0a0c10;
+      padding: 0.85rem 2rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      margin-top: 2rem;
+    }
+
+    .github-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+
+    .github-icon {
+      width: 22px;
+      height: 22px;
+      fill: #0a0c10;
+    }
+
+    .contribute-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-top: 3rem;
+      text-align: left;
+    }
+
+    .contribute-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .contribute-card .icon { font-size: 1.4rem; margin-bottom: 0.5rem; }
+    .contribute-card h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .contribute-card p { font-size: 0.82rem; color: var(--muted); }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    footer a { color: var(--muted); text-decoration: underline; }
+    footer a:hover { color: var(--text); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+      .phase { grid-template-columns: 1fr; }
+      .phase-label { flex-direction: row; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <a class="nav-logo" href="#">OIS <span>◯△⬟</span></a>
+  <ul class="nav-links">
+    <li><a href="#how-it-works">How It Works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="https://github.com/kathirpsmy/open-identity-symbols" target="_blank" rel="noopener" class="nav-cta">GitHub</a></li>
+  </ul>
+</nav>
+
+<!-- ── HERO ── -->
+<header class="hero">
+  <div class="hero-badge">Open Standard &middot; Early Development</div>
+
+  <h1>
+    Identity as <span class="gradient">Three Symbols</span>.<br/>
+    Universal. Private. Human-readable.
+  </h1>
+
+  <p>
+    Open Identity Symbols (OIS) is an open-source identity protocol that gives every person on earth
+    a globally unique, Unicode-based ID — no email required to share it, no algorithm to game.
+  </p>
+
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="https://github.com/kathirpsmy/open-identity-symbols" target="_blank" rel="noopener">
+      ★ Star on GitHub
+    </a>
+    <a class="btn btn-ghost" href="#how-it-works">See How It Works</a>
+  </div>
+
+  <div class="identity-demo">
+    <div class="symbol-display">⚙ ‑ 🌊 ‑ 🔥</div>
+    <div class="alias-display">gear-wave-fire</div>
+    <div class="demo-meta">
+      <span class="demo-chip">3-symbol ID</span>
+      <span class="demo-chip">125B possible IDs</span>
+      <span class="demo-chip">Human-readable alias</span>
+      <span class="demo-chip">TOTP secured</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── STATS ── -->
+<div class="stats-banner">
+  <div class="stats-inner">
+    <div>
+      <div class="stat-value">125B+</div>
+      <div class="stat-label">Possible unique identities from a 5,000-symbol pool</div>
+    </div>
+    <div>
+      <div class="stat-value">5,000</div>
+      <div class="stat-label">Curated Unicode symbols — no political, religious, or gendered icons</div>
+    </div>
+    <div>
+      <div class="stat-value">3-symbol</div>
+      <div class="stat-label">Compact format with a memorable human alias</div>
+    </div>
+    <div>
+      <div class="stat-value">Open</div>
+      <div class="stat-label">MIT-licensed protocol designed to become a global standard</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── HOW IT WORKS ── -->
+<section id="how-it-works">
+  <div class="section-label">How It Works</div>
+  <h2>From registration to symbol ID in seconds</h2>
+  <p class="section-intro">
+    OIS combines Unicode symbol generation with privacy-first profile management. Your symbol ID is yours forever — no usernames to squabble over, no handles to lose.
+  </p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Register with email + TOTP</h3>
+        <p>Create an account secured by two-factor authentication from day one. No phone number needed — just your authenticator app.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Generate your symbol ID</h3>
+        <p>The engine samples three symbols from a 5,000-symbol Unicode pool, checks global uniqueness, and pairs each with a word alias.</p>
+        <code>⚙ ‑ 🌊 ‑ 🔥 &nbsp;·&nbsp; gear-wave-fire</code>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Build your profile, control visibility</h3>
+        <p>Add fields like display name, bio, and location. Each field has a per-field visibility setting — public, private, or future consent-based sharing.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3>Share your ID, get discovered</h3>
+        <p>Anyone can search by symbol or alias through the public API. Your ID is stable and permanent — the foundation of a future federated identity layer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section id="features">
+  <div class="section-label">Features</div>
+  <h2>Built for privacy, built for scale</h2>
+  <p class="section-intro">OIS ships a full stack — identity engine, REST API, and React UI — ready to self-host or extend.</p>
+
+  <div class="grid-3">
+    <div class="card">
+      <span class="card-icon">🔤</span>
+      <h3>Unicode Symbol IDs</h3>
+      <p>Three symbols from a carefully curated, culturally neutral pool of 5,000+ characters. Memorable, copy-pasteable, renderable anywhere.</p>
+    </div>
+    <div class="card">
+      <span class="card-icon">🔐</span>
+      <h3>TOTP-first Security</h3>
+      <p>Two-factor authentication is mandatory at registration, not an afterthought. JWT sessions with reset flows built in.</p>
+    </div>
+    <div class="card">
+      <span class="card-icon">👁</span>
+      <h3>Per-field Visibility</h3>
+      <p>Each profile field carries its own visibility flag. Public data is searchable; private data never leaves your account.</p>
+    </div>
+    <div class="card">
+      <span class="card-icon">🔍</span>
+      <h3>Public Search API</h3>
+      <p>Case-insensitive search across symbol IDs and aliases. Designed for embedding in other applications and future protocol clients.</p>
+    </div>
+    <div class="card">
+      <span class="card-icon">⚡</span>
+      <h3>FastAPI + React Stack</h3>
+      <p>High-performance Python backend with async support. Vite-powered React frontend. Full Docker Compose setup for local development.</p>
+    </div>
+    <div class="card">
+      <span class="card-icon">🌐</span>
+      <h3>Open Protocol Vision</h3>
+      <p>OIS is designed to evolve into a decentralized, federated identity layer — not just another SaaS auth product.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── ROADMAP ── -->
+<section id="roadmap">
+  <div class="section-label">Roadmap</div>
+  <h2>Where we are and where we're going</h2>
+  <p class="section-intro">OIS is in active early development. The core identity engine and API are in place — bigger features are on the horizon.</p>
+
+  <div class="roadmap">
+
+    <div class="phase">
+      <div class="phase-label">
+        <span class="phase-tag now">Active</span>
+        <span class="phase-name">MVP</span>
+      </div>
+      <div class="phase-items">
+        <h3>Core Identity System</h3>
+        <ul>
+          <li>Unicode symbol + alias engine (5,000-symbol pool)</li>
+          <li>Registration, login, TOTP 2FA</li>
+          <li>Profile CRUD with per-field visibility</li>
+          <li>Public search API</li>
+          <li>React + Vite frontend</li>
+          <li>Docker Compose full-stack setup</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-label">
+        <span class="phase-tag soon">Next</span>
+        <span class="phase-name">Phase 2</span>
+      </div>
+      <div class="phase-items">
+        <h3>Privacy &amp; Access Control</h3>
+        <ul>
+          <li>Passkey / WebAuthn support</li>
+          <li>Consent-based data sharing between identities</li>
+          <li>Audit logs for profile access</li>
+          <li>Rate limiting and abuse protection</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-label">
+        <span class="phase-tag later">Later</span>
+        <span class="phase-name">Phase 3</span>
+      </div>
+      <div class="phase-items">
+        <h3>Decentralization &amp; Federation</h3>
+        <ul>
+          <li>Distributed ID generation (no single point of failure)</li>
+          <li>Federation protocol — run your own OIS node</li>
+          <li>Cross-node identity resolution</li>
+          <li>Open specification for third-party implementations</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── OPEN SOURCE ── -->
+<section class="oss-section" id="contribute">
+  <div class="oss-inner">
+    <div class="section-label" style="text-align:center">Open Source</div>
+    <h2>Built in the open.<br/>Contributions welcome.</h2>
+    <p class="section-intro" style="margin:1rem auto 0">
+      OIS is MIT-licensed and developed entirely in the open. Whether you want to fix a bug,
+      expand the Unicode pool, or help design the federation protocol — there's a place for you here.
+    </p>
+
+    <a class="github-btn" href="https://github.com/kathirpsmy/open-identity-symbols" target="_blank" rel="noopener">
+      <svg class="github-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577
+                 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755
+                 -1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305
+                 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38
+                 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399
+                 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24
+                 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81
+                 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795
+                 24 17.295 24 12c0-6.63-5.37-12-12-12z"/>
+      </svg>
+      View on GitHub
+    </a>
+  </div>
+
+  <div class="contribute-cards" style="max-width:1080px; margin:3rem auto 0;">
+    <div class="contribute-card">
+      <div class="icon">🐛</div>
+      <h4>Report Issues</h4>
+      <p>Found a bug or edge case? Open an issue — every report makes OIS more robust.</p>
+    </div>
+    <div class="contribute-card">
+      <div class="icon">✨</div>
+      <h4>Suggest Features</h4>
+      <p>Have an idea for the protocol or UI? Start a discussion in the repo.</p>
+    </div>
+    <div class="contribute-card">
+      <div class="icon">🔤</div>
+      <h4>Expand the Symbol Pool</h4>
+      <p>Help curate more culturally neutral Unicode symbols to grow ID capacity.</p>
+    </div>
+    <div class="contribute-card">
+      <div class="icon">📖</div>
+      <h4>Improve Docs</h4>
+      <p>Clear documentation is critical for a protocol. PRs to <code>docs/</code> are always welcome.</p>
+    </div>
+    <div class="contribute-card">
+      <div class="icon">🌍</div>
+      <h4>Spread the Word</h4>
+      <p>Star the repo, share it, write about it. Open standards need communities.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <p>
+    <strong>Open Identity Symbols</strong> &mdash; an open-source project by
+    <a href="https://github.com/kathirpsmy" target="_blank" rel="noopener">Kathir</a>.
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/kathirpsmy/open-identity-symbols" target="_blank" rel="noopener">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="api.md">API Docs</a>
+    &nbsp;&middot;&nbsp;
+    MIT License
+  </p>
+  <p style="margin-top:0.5rem; font-size:0.78rem;">
+    Built with FastAPI &middot; React &middot; PostgreSQL &middot; Unicode
+  </p>
+</footer>
+
+</body>
+</html>
