@@ -104,3 +104,93 @@ class TestLogin:
 def override_get_db_for_test(client):
     """Helper — not a real fixture, just for introspection."""
     return None
+
+
+TOTP_RESET_URL = "/api/v1/auth/totp/reset"
+ME_URL = "/api/v1/auth/me"
+
+
+def _make_confirmed_user(email: str) -> str:
+    """Insert a confirmed user directly and return a valid Bearer token."""
+    from backend.models.user import User
+    from backend.core.security import hash_password, generate_totp_secret
+    from backend.tests.conftest import TestingSessionLocal
+
+    db = TestingSessionLocal()
+    user = User(
+        email=email,
+        password_hash=hash_password("Test1234"),
+        totp_secret=generate_totp_secret(),
+        totp_confirmed=True,
+    )
+    db.add(user)
+    db.commit()
+    db.close()
+
+    from backend.core.security import create_access_token
+    return create_access_token(subject=email)
+
+
+class TestTOTPReset:
+    def test_reset_requires_auth(self, client):
+        res = client.post(TOTP_RESET_URL)
+        assert res.status_code == 403
+
+    def test_reset_returns_new_qr(self, client):
+        token = _make_confirmed_user("totp_reset@example.com")
+        res = client.post(TOTP_RESET_URL, headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 200
+        body = res.json()
+        assert "totp_qr" in body
+        assert "totp_secret" in body
+        assert body["totp_qr"].startswith("data:image/png;base64,")
+
+    def test_reset_marks_user_unconfirmed(self, client):
+        """After reset, totp_confirmed should be False — login must be blocked."""
+        from backend.tests.conftest import TestingSessionLocal
+        from backend.models.user import User
+
+        email = "totp_unconfirmed@example.com"
+        token = _make_confirmed_user(email)
+
+        client.post(TOTP_RESET_URL, headers={"Authorization": f"Bearer {token}"})
+
+        db = TestingSessionLocal()
+        user = db.query(User).filter(User.email == email).first()
+        assert user.totp_confirmed is False
+        db.close()
+
+    def test_reset_new_secret_differs_from_old(self, client):
+        from backend.tests.conftest import TestingSessionLocal
+        from backend.models.user import User
+
+        email = "totp_newsecret@example.com"
+        token = _make_confirmed_user(email)
+
+        db = TestingSessionLocal()
+        old_secret = db.query(User).filter(User.email == email).first().totp_secret
+        db.close()
+
+        client.post(TOTP_RESET_URL, headers={"Authorization": f"Bearer {token}"})
+
+        db = TestingSessionLocal()
+        new_secret = db.query(User).filter(User.email == email).first().totp_secret
+        db.close()
+
+        assert new_secret != old_secret
+
+
+class TestGetMe:
+    def test_me_requires_auth(self, client):
+        res = client.get(ME_URL)
+        assert res.status_code == 403
+
+    def test_me_returns_user_info(self, client):
+        email = "me_endpoint@example.com"
+        token = _make_confirmed_user(email)
+        res = client.get(ME_URL, headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 200
+        body = res.json()
+        assert body["email"] == email
+        assert body["is_admin"] is False
+        assert body["is_active"] is True

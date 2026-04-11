@@ -37,6 +37,12 @@ export const authApi = {
 
   login: (email, password, totpCode) =>
     api.post('/auth/login', { email, password, totp_code: totpCode }),
+
+  resetTotp: () =>
+    api.post('/auth/totp/reset'),
+
+  getMe: () =>
+    api.get('/auth/me'),
 }
 
 // ── Identity ──────────────────────────────────────────────────────────────────
@@ -56,4 +62,16 @@ export const profileApi = {
 // ── Search ────────────────────────────────────────────────────────────────────
 export const searchApi = {
   search: (q, limit = 20) => api.get('/search', { params: { q, limit } }),
+}
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+export const adminApi = {
+  listUsers: (skip = 0, limit = 100) =>
+    api.get('/admin/users', { params: { skip, limit } }),
+  deactivateUser: (userId) =>
+    api.patch(`/admin/users/${userId}/deactivate`),
+  activateUser: (userId) =>
+    api.patch(`/admin/users/${userId}/activate`),
+  getAnalytics: () =>
+    api.get('/admin/analytics'),
 }

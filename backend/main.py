@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.core.config import settings
 from backend.core.database import Base, engine
-from backend.api.routes import auth, identity, profile, search
+from backend.api.routes import auth, identity, profile, search, admin
 
 import backend.models  # noqa: F401 — ensures all models are registered with Base
 
@@ -46,6 +46,7 @@ app.include_router(auth.router,     prefix="/api/v1")
 app.include_router(identity.router, prefix="/api/v1")
 app.include_router(profile.router,  prefix="/api/v1")
 app.include_router(search.router,   prefix="/api/v1")
+app.include_router(admin.router,    prefix="/api/v1")
 
 
 @app.get("/health", tags=["system"])
