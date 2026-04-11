@@ -1,4 +1,4 @@
-"""Auth routes: /register, /login, /confirm-totp."""
+"""Auth routes: /register, /login, /confirm-totp, /totp/reset, /me."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -13,7 +13,10 @@ from backend.models.user import User
 from backend.schemas.auth import (
     RegisterRequest, RegisterResponse,
     LoginRequest, TokenResponse, ConfirmTOTPRequest,
+    TOTPResetResponse, UserMeResponse,
 )
+from backend.api.deps import get_current_user
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
@@ -65,3 +68,35 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid TOTP code")
     token = create_access_token(subject=user.email)
     return TokenResponse(access_token=token)
+
+
+@router.post("/totp/reset", response_model=TOTPResetResponse)
+def reset_totp(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Reset TOTP for the authenticated user.
+
+    Generates a fresh TOTP secret and marks the account as unconfirmed.
+    The client must call POST /auth/confirm-totp to re-confirm with the new
+    authenticator app entry before the next login.
+    """
+    new_secret = generate_totp_secret()
+    current_user.totp_secret = new_secret
+    current_user.totp_confirmed = False
+    db.commit()
+    return TOTPResetResponse(
+        message="TOTP has been reset. Scan the new QR code with your authenticator app, then confirm with POST /auth/confirm-totp.",
+        totp_qr=totp_qr_base64(new_secret, current_user.email),
+        totp_secret=new_secret,
+    )
+
+
+@router.get("/me", response_model=UserMeResponse)
+def get_me(current_user: User = Depends(get_current_user)):
+    """Return basic info about the authenticated user (email, admin status)."""
+    return UserMeResponse(
+        email=current_user.email,
+        is_admin=current_user.is_admin,
+        is_active=current_user.is_active,
+    )

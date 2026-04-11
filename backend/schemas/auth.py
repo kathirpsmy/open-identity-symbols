@@ -40,3 +40,15 @@ class TokenResponse(BaseModel):
 class ConfirmTOTPRequest(BaseModel):
     email: EmailStr
     totp_code: str
+
+
+class TOTPResetResponse(BaseModel):
+    message: str
+    totp_qr: str      # base64 PNG data-URI
+    totp_secret: str  # raw secret for manual entry
+
+
+class UserMeResponse(BaseModel):
+    email: str
+    is_admin: bool
+    is_active: bool

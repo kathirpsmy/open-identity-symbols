@@ -8,10 +8,18 @@ import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import Search from './pages/Search'
 import PublicProfile from './pages/PublicProfile'
+import Admin from './pages/Admin'
 
 function PrivateRoute({ children }) {
   const { token } = useAuth()
   return token ? children : <Navigate to="/login" replace />
+}
+
+function AdminRoute({ children }) {
+  const { token, isAdmin } = useAuth()
+  if (!token) return <Navigate to="/login" replace />
+  if (!isAdmin) return <Navigate to="/" replace />
+  return children
 }
 
 function AppRoutes() {
@@ -25,6 +33,7 @@ function AppRoutes() {
         <Route path="/u/:symbolId" element={<PublicProfile />} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+        <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
