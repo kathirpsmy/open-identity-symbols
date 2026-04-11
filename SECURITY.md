@@ -4,7 +4,7 @@
 
 Please **do not** open a public GitHub issue for security vulnerabilities.
 
-Contact: Security reporting contact is **coming soon**. In the meantime, please open a [GitHub issue](https://github.com/kathirpsmy/open-identity-symbols/issues) marked with the `security` label and we will respond promptly.
+Email: ois.protocol@gmail.com
 
 ## Security Model
 
