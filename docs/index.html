@@ -660,7 +660,7 @@
 
     <div class="phase">
       <div class="phase-label">
-        <span class="phase-tag now">Active</span>
+        <span class="phase-tag now">Complete</span>
         <span class="phase-name">MVP</span>
       </div>
       <div class="phase-items">
@@ -682,12 +682,29 @@
         <span class="phase-name">Phase 2</span>
       </div>
       <div class="phase-items">
-        <h3>Privacy &amp; Access Control</h3>
+        <h3>Distributed Client-Side Generation</h3>
         <ul>
-          <li>Passkey / WebAuthn support</li>
-          <li>Consent-based data sharing between identities</li>
-          <li>Audit logs for profile access</li>
-          <li>Rate limiting and abuse protection</li>
+          <li>Symbol generation moves fully client-side — no server needed to create an identity</li>
+          <li>WebAuthn / Passkey as identity anchor (private key stays on your device)</li>
+          <li>Static PWA — works in any mobile browser, no app install required</li>
+          <li>Key recovery via iCloud Keychain or Google Password Manager</li>
+          <li>Humans generate their own symbol; entities (IoT, AI agents) generate via CLI</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-label">
+        <span class="phase-tag soon">Next</span>
+        <span class="phase-name">Phase 3</span>
+      </div>
+      <div class="phase-items">
+        <h3>Optional Discovery Server</h3>
+        <ul>
+          <li>Publish your symbol + public key so others can find you</li>
+          <li>No passwords, no email, no central authority — public keys only</li>
+          <li>Self-hostable open-source server; any PWA can point to any server</li>
+          <li>Publish authenticated by WebAuthn assertion (proof-of-key, no account needed)</li>
         </ul>
       </div>
     </div>
@@ -695,14 +712,13 @@
     <div class="phase">
       <div class="phase-label">
         <span class="phase-tag later">Later</span>
-        <span class="phase-name">Phase 3</span>
+        <span class="phase-name">Phase 4</span>
       </div>
       <div class="phase-items">
-        <h3>Decentralization &amp; Federation</h3>
+        <h3>Entity CLI &amp; Federation</h3>
         <ul>
-          <li>Distributed ID generation (no single point of failure)</li>
-          <li>Federation protocol — run your own OIS node</li>
-          <li>Cross-node identity resolution</li>
+          <li>Single-binary CLI for servers, IoT devices, and AI agents</li>
+          <li>Federation protocol for cross-server symbol resolution</li>
           <li>Open specification for third-party implementations</li>
         </ul>
       </div>
