@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Open Identity Symbols</title>
+  <meta name="description" content="Generate a globally unique symbolic identity secured by a passkey on your device. No server. No account." />
+  <meta name="theme-color" content="#7c6ef7" />
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="./manifest.json" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Open Identity Symbols" />
+  <meta property="og:description" content="Your identity. Derived from a key only your device holds." />
+  <meta property="og:type" content="website" />
+
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f0f13;
+      --surface:     #1a1a24;
+      --surface-2:   #23233a;
+      --accent:      #7c6ef7;
+      --accent-dim:  #5b50c4;
+      --text:        #e8e8f0;
+      --text-muted:  #8888aa;
+      --success:     #4caf82;
+      --danger:      #e05c5c;
+      --radius:      12px;
+      --font:        system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1.5rem 1rem 3rem;
+    }
+
+    /* ── Layout ── */
+    .page {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    header {
+      text-align: center;
+      padding-top: 2rem;
+    }
+
+    .logo {
+      font-size: 2.4rem;
+      letter-spacing: 0.15em;
+      line-height: 1;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ── Cards ── */
+    .card {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      text-align: center;
+    }
+
+    .card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      max-width: 380px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.8rem 2rem;
+      border-radius: var(--radius);
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      text-decoration: none;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--surface-2);
+      font-size: 0.85rem;
+      padding: 0.6rem 1.4rem;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--text-muted); }
+    .btn-icon {
+      background: var(--surface-2);
+      color: var(--text-muted);
+      border: none;
+      border-radius: 8px;
+      padding: 0.45rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-icon:hover { background: #2e2e4a; color: var(--text); }
+
+    /* ── Symbol display ── */
+    .symbol-id {
+      font-size: clamp(2.8rem, 10vw, 4.5rem);
+      letter-spacing: 0.12em;
+      line-height: 1.1;
+      font-weight: 700;
+    }
+
+    .alias {
+      font-family: "Courier New", monospace;
+      font-size: 1.1rem;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    .copy-row {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .created-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Button group ── */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    .divider-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      position: relative;
+      width: 100%;
+      text-align: center;
+    }
+    .divider-text::before,
+    .divider-text::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 38%;
+      border-top: 1px solid var(--surface-2);
+    }
+    .divider-text::before { left: 0; }
+    .divider-text::after  { right: 0; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--surface-2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── How it works ── */
+    .how-it-works {
+      width: 100%;
+      border-top: 1px solid var(--surface-2);
+      padding-top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .how-it-works h2 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 2rem 1fr;
+      gap: 0.5rem 0.8rem;
+      align-items: start;
+    }
+
+    .step-num {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: var(--surface-2);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-text {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.55;
+      padding-top: 0.35rem;
+    }
+
+    /* ── Error ── */
+    .error-box {
+      background: rgba(224, 92, 92, 0.08);
+      border: 1px solid rgba(224, 92, 92, 0.3);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.5rem;
+      color: #e07a7a;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      width: 100%;
+      text-align: left;
+    }
+
+    /* ── Search results ── */
+    .search-card {
+      width: 100%;
+      background: var(--surface-2);
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .search-symbol { font-size: 1.6rem; letter-spacing: 0.1em; }
+    .search-alias  { font-family: "Courier New", monospace; font-size: 0.9rem; color: var(--accent); }
+    .search-name   { font-size: 0.85rem; color: var(--text); }
+    .search-meta   { font-size: 0.72rem; color: var(--text-muted); }
+    .search-hint   { color: var(--text-muted); font-size: 0.88rem; }
+    #search-results { display: flex; flex-direction: column; gap: 0.7rem; width: 100%; }
+
+    /* ── Server config ── */
+    .input-group { display: flex; flex-direction: column; gap: 0.4rem; width: 100%; text-align: left; }
+    .input-group label { font-size: 0.8rem; color: var(--text-muted); }
+    .text-input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid #333355;
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    .text-input:focus { outline: 2px solid var(--accent); }
+    .search-bar { display: flex; gap: 0.5rem; width: 100%; }
+    .search-bar .text-input { flex: 1; }
+
+    /* ── Published badge ── */
+    .published-badge {
+      font-size: 0.72rem;
+      color: var(--success);
+      background: rgba(76, 175, 130, 0.1);
+      border: 1px solid rgba(76, 175, 130, 0.25);
+      border-radius: 6px;
+      padding: 0.2rem 0.6rem;
+    }
+
+    /* ── Utility ── */
+    .hidden { display: none !important; }
+
+    .divider {
+      width: 100%;
+      border: none;
+      border-top: 1px solid var(--surface-2);
+    }
+
+    footer {
+      margin-top: auto;
+      padding-top: 2rem;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      text-align: center;
+    }
+
+    footer a { color: var(--text-muted); text-decoration: underline; }
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<div class="page">
+  <header>
+    <div class="logo" aria-hidden="true">⟡ ◈ ⬡</div>
+    <h1>Open Identity Symbols</h1>
+  </header>
+
+  <!-- ── STATE: landing ── -->
+  <section id="state-landing" class="card" aria-live="polite">
+    <p>
+      Generate a globally unique 3-symbol identity secured by a passkey
+      that never leaves your device.
+    </p>
+
+    <div class="btn-group">
+      <button id="btn-generate" class="btn btn-primary" style="width:100%;">
+        Generate my identity
+      </button>
+
+      <div class="divider-text">or</div>
+
+      <button id="btn-retrieve" class="btn btn-ghost" style="width:100%;">
+        Sign in with existing passkey
+      </button>
+
+      <div class="divider-text">or</div>
+
+      <button id="btn-recovery-open" class="btn btn-ghost" style="width:100%;">
+        Recover from discovery server
+      </button>
+    </div>
+
+    <div class="how-it-works">
+      <h2>How it works</h2>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          Your browser creates a <strong>passkey</strong> — a cryptographic
+          key pair where the private key is locked inside your device's secure
+          enclave and automatically syncs to iCloud Keychain or Google Password
+          Manager.
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          The public key is hashed with <strong>SHA-256</strong>. Three indices
+          are derived from the hash and mapped to symbols from a curated pool of
+          5,390 Unicode characters.
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          The result is your identity — <strong>deterministic, verifiable,
+          and owned only by you</strong>. No server involved. No email. No
+          password.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── STATE: generating ── -->
+  <section id="state-generating" class="card hidden" aria-live="polite" aria-label="Creating passkey">
+    <div class="spinner" role="status" aria-label="Loading"></div>
+    <p>Follow the prompt from your device to create a passkey&hellip;</p>
+    <p style="font-size:0.82rem;">This may open Face ID, Touch ID, Windows Hello, or a security key dialog.</p>
+  </section>
+
+  <!-- ── STATE: retrieving ── -->
+  <section id="state-retrieving" class="card hidden" aria-live="polite" aria-label="Retrieving identity">
+    <div class="spinner" role="status" aria-label="Loading"></div>
+    <p>Use your passkey to prove ownership and retrieve your identity&hellip;</p>
+    <p style="font-size:0.82rem;">The same biometric or security key you used when generating.</p>
+  </section>
+
+  <!-- ── STATE: result ── -->
+  <section id="state-result" class="card hidden" aria-live="polite">
+    <p style="font-size:0.8rem; color: var(--success); font-weight:600; text-transform:uppercase; letter-spacing:0.08em;">
+      Your identity
+    </p>
+
+    <div class="symbol-id" id="result-symbol-id" aria-label="Symbol identity"></div>
+
+    <div class="alias" id="result-alias" aria-label="Alias"></div>
+
+    <div class="copy-row">
+      <button id="btn-copy-symbol" class="btn-icon">Copy symbols</button>
+      <button id="btn-copy-alias" class="btn-icon">Copy alias</button>
+    </div>
+
+    <div class="created-label">
+      Generated on <span id="result-created"></span>
+    </div>
+
+    <div id="result-publish-status" class="published-badge hidden"></div>
+
+    <hr class="divider" />
+
+    <div class="btn-group" style="gap:0.5rem;">
+      <button id="btn-publish" class="btn btn-primary" style="width:100%;">
+        Publish to discovery server
+      </button>
+      <button id="btn-search-open" class="btn btn-ghost" style="width:100%;">
+        Search identities
+      </button>
+      <button id="btn-server-config" class="btn btn-ghost" style="width:100%; font-size:0.78rem;">
+        Configure server
+      </button>
+    </div>
+
+    <button id="btn-reset" class="btn btn-ghost" style="font-size:0.78rem; color: var(--danger); border-color: rgba(224,92,92,0.3);">
+      Generate a new identity
+    </button>
+  </section>
+
+  <!-- ── STATE: error ── -->
+  <section id="state-error" class="card hidden" aria-live="assertive">
+    <div class="error-box" id="error-message"></div>
+
+    <div style="display:flex; flex-direction:column; gap:0.7rem; align-items:center; width:100%;">
+      <button id="btn-retry" class="btn btn-primary">Try again</button>
+      <button id="btn-retry-retrieve" class="btn btn-ghost">Sign in with passkey instead</button>
+
+      <p style="font-size:0.82rem;">
+        WebAuthn requires HTTPS or <code>localhost</code>. Make sure you're on
+        a supported browser (Chrome 85+, Safari 16+, Firefox 90+).
+      </p>
+    </div>
+  </section>
+
+  <!-- ── STATE: publishing ── -->
+  <section id="state-publishing" class="card hidden" aria-live="polite">
+    <div class="spinner" role="status" aria-label="Publishing"></div>
+    <p>Use your passkey to sign the publication request&hellip;</p>
+    <p style="font-size:0.82rem;">Your symbol will be findable by anyone on this discovery server.</p>
+  </section>
+
+  <!-- ── STATE: publish-success ── -->
+  <section id="state-publish-success" class="card hidden" aria-live="polite">
+    <p style="font-size:0.8rem; color:var(--success); font-weight:600; text-transform:uppercase; letter-spacing:0.08em;">
+      Published
+    </p>
+    <div class="symbol-id" id="result-symbol-id-pub" style="font-size:2rem;"></div>
+    <p id="publish-success-msg" style="font-size:0.85rem; color:var(--text-muted);"></p>
+    <button id="btn-publish-back" class="btn btn-primary">Back to my identity</button>
+  </section>
+
+  <!-- ── STATE: publish-error ── -->
+  <section id="state-publish-error" class="card hidden" aria-live="assertive">
+    <div class="error-box" id="publish-error-msg"></div>
+    <button id="btn-publish-error-back" class="btn btn-ghost">Back</button>
+  </section>
+
+  <!-- ── STATE: search ── -->
+  <section id="state-search" class="card hidden" aria-live="polite">
+    <p style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted);">
+      Search identities
+    </p>
+
+    <div class="search-bar">
+      <input id="search-input" class="text-input" type="search"
+        placeholder="symbol, alias, or name…" autocomplete="off" />
+      <button id="btn-search-go" class="btn btn-primary" style="padding:0.8rem 1.2rem;">Go</button>
+    </div>
+
+    <div id="search-results"></div>
+
+    <button id="btn-search-back" class="btn btn-ghost">Back</button>
+  </section>
+
+  <!-- ── STATE: server-config ── -->
+  <section id="state-server-config" class="card hidden" aria-live="polite">
+    <p style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted);">
+      Discovery server
+    </p>
+
+    <p style="font-size:0.88rem;">
+      Point the PWA at any self-hosted discovery server. Leave blank to use
+      the PWA offline-only without publishing.
+    </p>
+
+    <div class="input-group">
+      <label for="server-url-input">Server URL</label>
+      <input id="server-url-input" class="text-input" type="url"
+        placeholder="https://discovery.example.com" autocomplete="off" />
+    </div>
+
+    <p id="server-config-saved" style="font-size:0.8rem; color:var(--success);"></p>
+
+    <div class="btn-group">
+      <button id="btn-server-config-save" class="btn btn-primary" style="width:100%;">Save</button>
+      <button id="btn-server-config-cancel" class="btn btn-ghost" style="width:100%;">Cancel</button>
+    </div>
+  </section>
+
+  <!-- ── STATE: recovery ── -->
+  <section id="state-recovery" class="card hidden" aria-live="polite">
+    <p style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted);">
+      Recover from discovery
+    </p>
+
+    <p style="font-size:0.88rem;">
+      If you published your identity to a discovery server, you can restore it
+      here. Enter the server URL, then authenticate with the same passkey you
+      used when you first registered.
+    </p>
+
+    <div class="input-group">
+      <label for="recovery-server-input">Discovery server URL</label>
+      <input id="recovery-server-input" class="text-input" type="url"
+        placeholder="https://discovery.example.com" autocomplete="off" />
+    </div>
+
+    <p id="recovery-error" style="font-size:0.82rem; color:var(--danger); min-height:1.2em;"></p>
+
+    <div class="btn-group">
+      <button id="btn-recovery-go" class="btn btn-primary" style="width:100%;">
+        Recover with passkey
+      </button>
+      <button id="btn-recovery-cancel" class="btn btn-ghost" style="width:100%;">Cancel</button>
+    </div>
+  </section>
+
+</div><!-- .page -->
+
+<footer>
+  <a href="https://github.com/open-identity-symbols/open-identity-symbols" target="_blank" rel="noopener">
+    Open Identity Symbols
+  </a>
+  &mdash; open source, no tracking, no backend
+</footer>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

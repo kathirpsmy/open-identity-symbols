@@ -1,135 +1,136 @@
 # Open Identity Symbols (OIS)
 
-> A global, privacy-first identity system based on Unicode symbols.
+> Your identity as three symbols — derived from a key only your device holds.
 
-Your identity is **three symbols** — permanently yours, globally unique, human-readable.
+**[Try it live →](https://kathirpsmy.github.io/open-identity-symbols/app/)**
+
+OIS is an open-source identity system that generates a globally unique, human-readable ID — three Unicode symbols — secured by a passkey on your device. No accounts. No servers. Works offline.
 
 ```
-◯-△-⬟   →   circle-triangle-pentagon
+◯ ‑ △ ‑ ⬟   →   circle-triangle-pentagon
 ```
 
-## Features
+Your symbol ID is derived deterministically from the public half of a passkey created by your device's hardware. The same device always produces the same identity. No central authority assigns or controls it.
 
-- **Unicode IDs** — 3-symbol identifiers from a curated pool of 5,390 safe symbols
-- **125 billion+ unique identities** — more than enough for every person on Earth
-- **Alias system** — every symbol ID has a human-readable word alias (e.g. `frost-amber-helix`)
-- **Privacy-first** — field-level visibility control on profiles
-- **TOTP-secured** — two-factor authentication required for all accounts
-- **Open standard** — designed to evolve into a federated protocol
+---
 
-## Quick Start
+## How It Works
 
-### With Docker (recommended)
+1. **Open the app** — runs entirely in your browser, no install needed
+2. **Create a passkey** — your device (phone, laptop, security key) generates a P-256 key pair; the private key never leaves the hardware
+3. **Derive your identity** — `SHA-256(SPKI public key bytes)` is sliced into three indices that map into a 5,000-symbol Unicode pool
+4. **Get your ID** — e.g. `⚙-🌊-🔥 · gear-wave-fire` — permanent, globally unique, offline-ready
 
-```bash
-cp .env.example .env
-# Edit .env — set a strong SECRET_KEY
-docker compose up
-```
+Optionally publish your identity to a discovery server so others can look you up by symbol or alias.
 
-- Frontend: http://localhost
-- API docs: http://localhost:8000/docs
-
-### Local Development
-
-**Backend**
-
-```bash
-cd open-identity-symbols
-python -m venv .venv
-.venv/Scripts/activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
-pip install -r backend/requirements.txt
-cp backend/.env.example backend/.env
-# Start Postgres + Redis (Docker or local)
-uvicorn backend.main:app --reload --port 8000
-```
-
-**Frontend**
-
-```bash
-cd frontend/web
-npm install
-npm run dev     # http://localhost:5173
-```
-
-**Tests**
-
-```bash
-# From repo root, with venv active
-pytest backend/tests/ -v
-```
-
-**Load test** (1M ID generation)
-
-```bash
-python tests/load/test_id_generation.py
-```
+---
 
 ## Project Structure
 
 ```
 open-identity-symbols/
-├── backend/
-│   ├── core/          # Config, DB, security utilities
-│   ├── services/      # Identity engine (Unicode + alias)
-│   ├── api/routes/    # FastAPI routes: auth, identity, profile, search
-│   ├── models/        # SQLAlchemy models
-│   ├── schemas/       # Pydantic schemas
-│   ├── data/          # Unicode pool + alias map
-│   └── tests/         # pytest test suite
-├── frontend/web/      # React + Vite + Tailwind UI
-├── tests/load/        # Load / stress tests
-├── docs/              # Architecture, API, frontend docs
-├── specs/             # Unicode pool, alias, ID generation specs
-├── infra/             # Docker, deployment configs
-└── docker-compose.yml
+├── pwa/              # Static PWA — runs entirely in the browser
+│   ├── index.html
+│   ├── app.js        # WebAuthn, IndexedDB, symbol derivation
+│   ├── sw.js         # Service worker (offline support)
+│   ├── manifest.json
+│   ├── data/         # Auto-generated JS data files
+│   └── scripts/
+│       ├── export_data.py      # Generates pool.js + alias.js from data/
+│       └── test_derivation.mjs # Node.js derivation test
+├── discovery/        # Optional self-hosted discovery server (FastAPI)
+│   ├── api/          # /challenge  /publish  /lookup  /search
+│   ├── services/     # Symbol derivation, WebAuthn verification
+│   └── tests/        # pytest test suite
+├── data/             # Source of truth: Unicode pool + alias map (Python)
+│   ├── unicode_pool.py
+│   └── alias_map.py
+├── specs/            # Protocol specifications
+│   ├── unicode-pool.md
+│   └── id-generation.md
+├── docs/             # Landing page + architecture docs
+└── docker-compose.yml  # Self-host the discovery server
 ```
 
-## API Overview
+---
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/auth/register` | Register with email + password |
-| POST | `/api/v1/auth/confirm-totp` | Confirm TOTP setup |
-| POST | `/api/v1/auth/login` | Login with email + password + TOTP |
-| POST | `/api/v1/identity/generate` | Generate your 3-symbol ID |
-| GET | `/api/v1/identity/me` | Get your identity |
-| GET | `/api/v1/identity/{symbol_id}` | Look up any identity |
-| GET/PUT | `/api/v1/profile/me` | View or update your profile |
-| GET | `/api/v1/profile/{symbol_id}` | View a public profile |
-| GET | `/api/v1/search?q=...` | Search by symbol ID or alias |
+## Try the PWA
 
-Full interactive docs at `/docs` when the backend is running.
+The PWA is hosted on GitHub Pages — no setup needed:
 
-## Tech Stack
+**[https://kathirpsmy.github.io/open-identity-symbols/app/](https://kathirpsmy.github.io/open-identity-symbols/app/)**
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python 3.11, FastAPI, SQLAlchemy |
-| Auth | JWT, TOTP (pyotp), bcrypt |
-| Database | PostgreSQL (SQLite for tests) |
-| Cache | Redis |
-| Frontend | React 18, Vite, Tailwind CSS, Axios |
-| Container | Docker, docker-compose |
-| Tests | pytest, httpx |
+It works on any modern browser with WebAuthn support (Chrome, Safari, Firefox, Edge). On mobile, your fingerprint or face ID secures the passkey.
 
-## Design Decisions
+---
 
-### Symbol Pool
-- 5,390 curated Unicode symbols
-- Excludes: religious, political, national flags, gendered symbols
-- Theoretical capacity: **5390 × 5389 × 5388 ≈ 156 billion unique IDs**
+## Run the PWA Locally
 
-### Alias System
-- Each symbol maps to a unique English word
-- Compound words used for less-common symbols (e.g. `frostgale`, `amberbrook`)
-- ID alias format: `word1-word2-word3`
+The PWA is static HTML/JS — no build tool, no bundler. You need a local HTTP server because WebAuthn and ES module imports don't work over `file://`.
 
-### Privacy Model
-- Profile fields are **private by default**
-- Users explicitly mark each field as `public` or `private`
-- Public profile only returns `public` fields
+**Prerequisites:** Python 3.11+ (for data generation)
+
+```bash
+# 1. Clone and enter the repo
+git clone https://github.com/kathirpsmy/open-identity-symbols
+cd open-identity-symbols
+
+# 2. Create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+# 3. Generate the data files (pool.js + alias.js)
+python pwa/scripts/export_data.py
+
+# 4. Serve the PWA directory over HTTP
+python -m http.server 8080 --directory pwa
+```
+
+Then open **[http://localhost:8080](http://localhost:8080)** in your browser.
+
+> **Note:** WebAuthn requires either `localhost` or HTTPS. The `python -m http.server` approach works fine for local development on `localhost`.
+
+---
+
+## Self-Host the Discovery Server
+
+The discovery server is optional. It lets users publish their symbol ID so others can look them up. Anyone can run their own instance.
+
+```bash
+git clone https://github.com/kathirpsmy/open-identity-symbols
+cd open-identity-symbols
+docker compose up
+```
+
+The discovery API will be available at `http://localhost:8001`.
+
+See [docs/discovery-server.md](docs/discovery-server.md) for full setup and API reference.
+
+---
+
+## Symbol Pool
+
+- **5,390 curated Unicode symbols** — geometric shapes, arrows, math operators, nature emoji, and more
+- Excludes religious, political, national-flag, and gendered symbols
+- Capacity: **5390³ ≈ 156 billion unique identities** — enough for every person on Earth many times over
+- Alias vocabulary: 5,500+ unique English words (real words + systematic color-nature compounds)
+
+See [specs/unicode-pool.md](specs/unicode-pool.md) for curation rules and [specs/id-generation.md](specs/id-generation.md) for the derivation algorithm.
+
+---
+
+## Vision
+
+OIS is designed to grow into a **standardized, open identity protocol**:
+
+- Any app or service can verify an OIS identity without calling home to a central server
+- Multiple discovery servers can federate — no single authority controls the namespace
+- The derivation algorithm is deterministic and publicly specified — third parties can implement it independently
+- Long-term goal: propose OIS as an open standard (similar in spirit to how email addresses work, but for symbolic, hardware-backed identities)
+
+This is early-stage. The PWA and discovery server are working implementations. The protocol specification and federation layer are the next frontier — contributions welcome.
+
+---
 
 ## Contributing
 
@@ -141,4 +142,4 @@ See [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT
+[MIT](LICENSE)

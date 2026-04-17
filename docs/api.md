@@ -1,204 +1,117 @@
-# API Reference
+# Discovery Server API
 
-Base URL: `/api/v1`
+Base URL: `http://localhost:8001` (self-hosted default)
 
-Interactive docs available at `/docs` (Swagger UI) and `/redoc`.
-
----
-
-## Auth
-
-### POST /auth/register
-
-Register a new account. Returns TOTP QR code for 2FA setup.
-
-**Request**
-```json
-{ "email": "user@example.com", "password": "StrongPass1" }
-```
-
-**Response 201**
-```json
-{
-  "message": "Registration successful...",
-  "totp_qr": "data:image/png;base64,...",
-  "totp_secret": "BASE32SECRET"
-}
-```
-
-### POST /auth/confirm-totp
-
-Confirm TOTP setup after scanning QR. Requires Bearer token (from manual token creation or via a temporary mechanism). Marks account as active.
-
-**Request**
-```json
-{ "totp_code": "123456" }
-```
-
-**Response 200**
-```json
-{ "access_token": "...", "token_type": "bearer" }
-```
-
-### POST /auth/login
-
-**Request**
-```json
-{ "email": "user@example.com", "password": "StrongPass1", "totp_code": "123456" }
-```
-
-**Response 200**
-```json
-{ "access_token": "...", "token_type": "bearer" }
-```
-
-### POST /auth/totp/reset *(auth required)*
-
-Reset the authenticated user's TOTP secret. Generates a new secret, invalidates the old authenticator entry, and sets `totp_confirmed=False`. The client must call `POST /auth/confirm-totp` with the new code to re-confirm before the next login.
-
-**Response 200**
-```json
-{
-  "message": "TOTP has been reset...",
-  "totp_qr": "data:image/png;base64,...",
-  "totp_secret": "NEWBASE32SECRET"
-}
-```
-
-**Errors**
-- `401` — invalid or expired token
-
-### GET /auth/me *(auth required)*
-
-Return basic info about the currently authenticated user.
-
-**Response 200**
-```json
-{ "email": "user@example.com", "is_admin": false, "is_active": true }
-```
+Interactive docs available at `/docs` (Swagger UI) and `/redoc` when the server is running.
 
 ---
 
-## Identity
+## Endpoints
 
-All identity write endpoints require `Authorization: Bearer <token>`.
+### `GET /challenge`
 
-### POST /identity/generate
+Request a one-time WebAuthn challenge before publishing.
 
-Generate a unique 3-symbol ID for the authenticated user. Can only be called once per user.
+**Response `200`**
+```json
+{
+  "challenge": "a3f9e2b1c4d5..."
+}
+```
 
-**Response 201**
+The challenge is a random 32-byte hex string. It is consumed on first use.
+
+---
+
+### `POST /publish`
+
+Publish a symbol identity with a WebAuthn proof of ownership.
+
+**Request body**
+```json
+{
+  "symbol_id":       "⚙-🌊-🔥",
+  "alias":           "gear-wave-fire",
+  "public_key":      "<base64url SPKI DER>",
+  "credential_id":   "<base64url>",
+  "client_data_json": "<base64url>",
+  "authenticator_data": "<base64url>",
+  "signature":       "<base64url>"
+}
+```
+
+**Validation**
+1. The WebAuthn assertion is verified against the submitted `public_key`
+2. The server re-derives the symbol ID from `public_key` and confirms it matches `symbol_id`
+3. Duplicate `symbol_id` returns `409 Conflict`
+
+**Response `201`**
 ```json
 {
   "symbol_id": "⚙-🌊-🔥",
-  "alias": "gear-wave-fire",
-  "created_at": "2024-01-01T00:00:00Z"
+  "alias":     "gear-wave-fire"
 }
 ```
 
-### GET /identity/me
-
-Get the authenticated user's identity.
-
-### GET /identity/{symbol_id}
-
-Public lookup by symbol ID.
-
 ---
 
-## Profile
+### `GET /lookup/{symbol_id}`
 
-### GET /profile/me *(auth required)*
+Look up a published identity by its symbol ID.
 
-Returns full profile including private fields.
+**Example:** `GET /lookup/⚙-🌊-🔥`
 
-### PUT /profile/me *(auth required)*
-
-**Request**
+**Response `200`**
 ```json
 {
-  "data": { "display_name": "Alice", "bio": "Hello", "location": "Earth" },
-  "visibility": { "display_name": "public", "bio": "private", "location": "public" }
+  "symbol_id":  "⚙-🌊-🔥",
+  "alias":      "gear-wave-fire",
+  "public_key": "<base64url SPKI DER>",
+  "created_at": "2025-01-15T10:23:00Z"
 }
 ```
 
-### GET /profile/{symbol_id}
-
-Returns only `public` fields.
+**Response `404`** if not found.
 
 ---
 
-## Admin
+### `GET /search?q=`
 
-All admin endpoints require an authenticated user with `is_admin=true`. Non-admin requests receive `403 Forbidden`.
+Full-text search across symbol IDs and aliases.
 
-### GET /admin/users
+**Example:** `GET /search?q=gear`
 
-Return a paginated list of all users.
-
-| Param | Type | Default |
-|-------|------|---------|
-| `skip` | int | 0 |
-| `limit` | int | 100 |
-
-**Response 200** — array of user objects:
+**Response `200`**
 ```json
 [
   {
-    "id": 1,
-    "email": "user@example.com",
-    "is_active": true,
-    "is_admin": false,
-    "totp_confirmed": true,
-    "has_identity": true,
-    "created_at": "2024-01-01T00:00:00Z"
+    "symbol_id": "⚙-🌊-🔥",
+    "alias":     "gear-wave-fire"
   }
 ]
 ```
 
-### PATCH /admin/users/{user_id}/deactivate
-
-Deactivate a user account. Blocked users receive `401` on all authenticated requests. Admins cannot deactivate their own account.
-
-**Response 200** — updated user object.
-
-**Errors**
-- `400` — cannot deactivate own account
-- `404` — user not found
-
-### PATCH /admin/users/{user_id}/activate
-
-Re-activate a previously deactivated user account.
-
-**Response 200** — updated user object.
-
-### GET /admin/analytics
-
-Return aggregate platform statistics.
-
-**Response 200**
-```json
-{
-  "total_users": 120,
-  "active_users": 115,
-  "inactive_users": 5,
-  "admin_users": 2,
-  "total_identities": 98,
-  "new_users_last_7_days": 14
-}
-```
+Returns up to 20 results ordered by relevance.
 
 ---
 
-## Search
+## Error Responses
 
-### GET /search?q={query}
+| Status | Meaning |
+|--------|---------|
+| `400`  | Invalid request body or WebAuthn verification failed |
+| `404`  | Symbol ID not found |
+| `409`  | Symbol ID already published |
+| `422`  | Validation error (Pydantic) |
 
-Case-insensitive substring search on `symbol_id` and `alias`.
+---
 
-| Param | Type | Default | Max |
-|-------|------|---------|-----|
-| `q` | string | required | 100 chars |
-| `limit` | int | 20 | 100 |
+## Running Locally
 
-**Response 200** — array of public profile objects.
+```bash
+docker compose up
+# Discovery API: http://localhost:8001
+# Swagger UI:    http://localhost:8001/docs
+```
+
+See [discovery-server.md](./discovery-server.md) for full setup guide.

@@ -8,14 +8,23 @@ Email: ois.protocol@gmail.com
 
 ## Security Model
 
-- Passwords hashed with bcrypt (cost 12)
-- TOTP (RFC 6238) required on every login
-- JWTs signed with HS256, configurable TTL (default 60 min)
-- Profile fields are **private by default** — users must opt-in to public visibility
-- No PII stored beyond email address
+### PWA (client-side identity generation)
 
-## Known Limitations (MVP)
+- **No passwords, no server secrets.** Identity is derived entirely on-device.
+- **WebAuthn / Passkey** — the private key is generated and stored in your device's secure enclave (TPM, Secure Element, or OS-managed keystore). It never leaves the hardware.
+- **Symbol derivation** — `SHA-256(SPKI DER bytes of public key)` produces a deterministic, globally unique identity. Knowing the symbol ID reveals nothing about the private key.
+- **IndexedDB** — credential metadata is stored locally in IndexedDB (no cloud sync by default).
+- **Offline-capable** — a service worker caches all app assets; no network calls are made during identity generation.
 
-- No rate limiting yet (planned for v0.2)
-- No refresh tokens (sessions expire after TTL)
-- TOTP is the only 2FA method (passkeys planned for v0.2)
+### Discovery Server (optional)
+
+- Stores only **public** data: symbol ID, alias, public key (SPKI bytes), and a WebAuthn assertion used as proof of ownership.
+- Publishing requires a valid WebAuthn assertion signed by the private key corresponding to the published public key.
+- The server never sees or stores private keys.
+- CORS is restricted to configured origins.
+
+## Known Limitations
+
+- **Single-device by default** — passkeys are device-bound unless the device supports synced passkeys (e.g. iCloud Keychain, Google Password Manager). Cross-device identity portability is a planned feature.
+- **No revocation** — once published to a discovery server, there is no built-in revocation mechanism yet.
+- **Discovery servers are independent** — there is no global federation layer yet; each server is its own namespace.

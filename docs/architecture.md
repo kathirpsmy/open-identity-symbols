@@ -1,192 +1,158 @@
 # Architecture
 
-## System Overview
+## Overview
 
-```
-Browser
-  │
-  ▼
-[React + Vite]  ──────────────────── Nginx (port 80)
-                                           │ /api/*
-                                           ▼
-                              [FastAPI Backend] (port 8000)
-                              │               │
-                              ▼               ▼
-                         [PostgreSQL]      [Redis]
-```
+OIS has two components:
 
-## Backend
+| Component | Role | Deployment |
+|-----------|------|------------|
+| **PWA** | Identity generation, credential storage, offline use | GitHub Pages (static) |
+| **Discovery Server** | Optional public registry for symbol lookup | Self-hosted / Docker |
 
-### Layers
-
-| Layer | Path | Responsibility |
-|-------|------|----------------|
-| API Routes | `backend/api/routes/` | HTTP handling, validation, response shaping |
-| Services | `backend/services/` | Business logic (identity engine) |
-| Models | `backend/models/` | SQLAlchemy ORM models |
-| Schemas | `backend/schemas/` | Pydantic I/O schemas |
-| Core | `backend/core/` | Config, DB session, security primitives |
-| Data | `backend/data/` | Unicode pool + alias map (pure Python, no DB) |
-
-### Identity Engine Flow
-
-```
-Request → identity_engine.generate_symbol_id()
-            │
-            ├─ Pick 3 distinct symbols from SYMBOL_POOL (5390 items)
-            │   using secrets.SystemRandom for CSPRNG
-            │
-            ├─ Look up alias for each symbol from alias_map
-            │
-            ├─ Return { symbol_id: "A-B-C", alias: "word1-word2-word3" }
-            │
-            └─ Caller retries up to 10× on DB uniqueness collision
-```
-
-### Auth Flow
-
-```
-Register:  POST /register → create User (unconfirmed) → return TOTP QR
-Confirm:   POST /confirm-totp (Bearer token) → verify TOTP → mark confirmed
-Login:     POST /login → verify password + TOTP → return JWT
-```
-
-## Database Schema
-
-```sql
-users
-  id            INTEGER PK
-  email         VARCHAR(254) UNIQUE
-  password_hash VARCHAR(255)
-  totp_secret   VARCHAR(64)
-  totp_confirmed BOOLEAN
-  is_active     BOOLEAN
-  created_at    TIMESTAMPTZ
-
-identities
-  id         INTEGER PK
-  user_id    INTEGER FK → users.id UNIQUE
-  symbol_id  VARCHAR(64) UNIQUE
-  alias      VARCHAR(128) UNIQUE
-  created_at TIMESTAMPTZ
-
-profiles
-  id         INTEGER PK
-  user_id    INTEGER FK → users.id UNIQUE
-  data       JSONB      -- { display_name, bio, location, ... }
-  visibility JSONB      -- { field: "public"|"private" }
-  updated_at TIMESTAMPTZ
-```
-
-## Security
-
-- Passwords: bcrypt (cost factor 12)
-- Sessions: HS256 JWT, configurable TTL
-- 2FA: RFC 6238 TOTP, ±1 window
-- CORS: configurable origin allowlist
-- No sensitive data in JWT payload (only email as `sub`)
+The PWA works entirely without the discovery server. Discovery is opt-in — users publish their identity only if they want to be findable.
 
 ---
 
-## Target Architecture (v2 — Distributed)
-
-The v2 design removes the server as a required participant in identity creation. The backend becomes an optional discovery service.
-
-### System Overview
+## PWA — Client-side Identity
 
 ```
-Human Identity Flow
-─────────────────────────────────────────────────────────────
-Mobile PWA  (static site — GitHub Pages or any CDN)
-  │
-  ├─ navigator.credentials.create()
-  │    Private key → device secure enclave
-  │    Syncs automatically: iCloud Keychain (iOS/macOS)
-  │                         Google Password Manager (Android/Chrome)
-  │
-  ├─ SHA-256(credentialPublicKey) → 3 symbol indices → ⚙-🌊-🔥
-  │
-  ├─ Identity is live. No server needed.
-  │
-  └─ Optional: POST /publish → discovery server
-       {symbol_id, public_key_jwk, alias, public_profile}
-
-Entity Identity Flow
-─────────────────────────────────────────────────────────────
-CLI / server SDK
-  │
-  ├─ Generate Ed25519 keypair (private key stays on server)
-  └─ Same derivation: SHA-256(publicKey) → 3 symbols
-
-Optional Discovery Server  (self-hostable)
-─────────────────────────────────────────────────────────────
-Stores: symbol_id → { public_key_jwk, alias, public_profile }
-No passwords. No email. No session required for lookup.
-Publish authenticated by WebAuthn assertion (proof-of-key).
-Anyone can run one. PWA is configurable to point to any server.
+Browser
+  └── pwa/
+       ├── index.html        Entry point
+       ├── app.js            WebAuthn, derivation, IndexedDB, discovery calls
+       ├── sw.js             Service worker (offline, cache-first)
+       ├── manifest.json     PWA manifest
+       └── data/
+            ├── pool.js      5,390 Unicode symbols (auto-generated)
+            └── alias.js     Matching English-word aliases (auto-generated)
 ```
+
+### Identity Generation Flow
+
+```
+User taps "Generate"
+  │
+  ├─ navigator.credentials.create()   ← WebAuthn API
+  │    │  (OS prompts: Touch ID / Face ID / PIN)
+  │    └─ Credential { publicKey: CryptoKey }
+  │
+  ├─ exportKey("spki", publicKey)      ← SPKI DER bytes
+  │
+  ├─ SHA-256(spki_bytes)               ← 32-byte digest
+  │    │
+  │    ├─ idx_a = uint32_be(digest, 0) % POOL_SIZE
+  │    ├─ idx_b = uint32_be(digest, 4) % POOL_SIZE
+  │    └─ idx_c = uint32_be(digest, 8) % POOL_SIZE
+  │
+  └─ symbol_id = POOL[a] + "-" + POOL[b] + "-" + POOL[c]
+     alias     = ALIAS[a] + "-" + ALIAS[b] + "-" + ALIAS[c]
+```
+
+If any two indices are equal (collision), the window shifts by 3 bytes and indices are re-derived from offsets 3, 6, 9.
 
 ### Symbol Derivation Algorithm
 
-The same algorithm is used for humans (WebAuthn credential key) and entities (server-generated Ed25519 key).
-
 ```
-input:  credential public key bytes (COSE/DER/raw format)
-        pool_size = 5390  (curated Unicode symbol pool)
+digest = SHA-256(SPKI DER bytes of P-256 public key)
 
-digest = SHA-256(publicKeyBytes)
+idx_a = big-endian uint32 at digest[0:4]  mod pool_size
+idx_b = big-endian uint32 at digest[4:8]  mod pool_size
+idx_c = big-endian uint32 at digest[8:12] mod pool_size
 
-idx_a  = big_endian_uint32(digest[0:4])  % pool_size
-idx_b  = big_endian_uint32(digest[4:8])  % pool_size
-idx_c  = big_endian_uint32(digest[8:12]) % pool_size
+if any two indices are equal:
+    idx_a = big-endian uint32 at digest[3:7]  mod pool_size
+    idx_b = big-endian uint32 at digest[6:10] mod pool_size
+    idx_c = big-endian uint32 at digest[9:13] mod pool_size
 
-# Collision within the triple: shift window by 3 bytes, retry
-if idx_a == idx_b or idx_b == idx_c or idx_a == idx_c:
-    idx_a = big_endian_uint32(digest[3:7])  % pool_size
-    idx_b = big_endian_uint32(digest[6:10]) % pool_size
-    idx_c = big_endian_uint32(digest[9:13]) % pool_size
-
-symbol_id = POOL[idx_a] + "-" + POOL[idx_b] + "-" + POOL[idx_c]
-alias     = ALIAS[idx_a] + "-" + ALIAS[idx_b] + "-" + ALIAS[idx_c]
+symbol_id = pool[idx_a] + "-" + pool[idx_b] + "-" + pool[idx_c]
+alias     = alias[idx_a] + "-" + alias[idx_b] + "-" + alias[idx_c]
 ```
 
-**Collision probability:** With 5,390³ ≈ 156 billion possible triples and SHA-256 output, the probability of two distinct public keys mapping to the same triple is negligible for any realistic population.
+The algorithm is identical in JavaScript (`pwa/app.js`) and Python (`discovery/services/symbol_derive.py`), enabling server-side verification of client-generated identities.
 
-### Ownership Verification (no server required)
+### Data Files
+
+`pwa/data/pool.js` and `pwa/data/alias.js` are auto-generated at CI time from the Python source in `data/`. The generation script is `pwa/scripts/export_data.py`.
+
+---
+
+## Discovery Server — Optional Registry
 
 ```
-Verifier receives:
-  { symbol_id, public_key_jwk, challenge, signature }
-
-Step 1: Derive expected symbol from public_key_jwk
-        → compare to symbol_id (must match)
-
-Step 2: Verify WebAuthn assertion:
-        signature = sign(authenticatorData || SHA-256(clientDataJSON))
-        using public_key_jwk
-
-If both pass → claimant controls the private key → identity is authentic.
+discovery/
+├── main.py           FastAPI application (port 8001)
+├── config.py         Settings (DATABASE_URL, CORS_ORIGINS, WEBAUTHN_VERIFY)
+├── database.py       SQLAlchemy / PostgreSQL
+├── models.py         SymbolEntry model
+├── schemas.py        Pydantic request/response schemas
+├── api/
+│   ├── challenge.py  GET  /challenge              → WebAuthn challenge
+│   ├── publish.py    POST /publish                → Register identity
+│   ├── lookup.py     GET  /lookup/{symbol_id}     → Fetch public metadata
+│   └── search.py     GET  /search?q=...           → Full-text search
+└── services/
+    ├── symbol_derive.py    Server-side derivation (matches PWA algorithm)
+    └── webauthn_verify.py  Verify WebAuthn assertions
 ```
 
-### Human vs. Entity Distinction
-
-| Attribute | Human (WebAuthn passkey) | Entity (server keypair) |
-|-----------|--------------------------|-------------------------|
-| Key origin | Device secure enclave | Server-generated |
-| Credential type | `public-key` (WebAuthn) | Raw Ed25519/RSA |
-| User-presence flag | `UP=1, UV=1` in authenticatorData | Absent |
-| Generation tool | PWA in mobile browser | CLI / server SDK |
-| Key recovery | iCloud / Google Keychain sync | Operator's key management |
-
-### Discovery Server Schema (v2)
+### Database Schema
 
 ```sql
-symbols
-  symbol_id    VARCHAR(64) PRIMARY KEY
-  alias        VARCHAR(128) UNIQUE
-  public_key   JSONB        -- JWK format
-  public_profile JSONB      -- optional, user-controlled
-  published_at TIMESTAMPTZ
+CREATE TABLE symbol_entries (
+    id          SERIAL PRIMARY KEY,
+    symbol_id   TEXT UNIQUE NOT NULL,   -- e.g. "⚙-🌊-🔥"
+    alias       TEXT NOT NULL,          -- e.g. "gear-wave-fire"
+    public_key  BYTEA NOT NULL,         -- SPKI DER bytes of P-256 public key
+    proof       JSONB NOT NULL,         -- WebAuthn assertion used at publish time
+    created_at  TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-No `users`, `passwords`, `sessions`, or `totp` tables needed for the discovery server role.
+### Publish Flow
+
+```
+Client                            Discovery Server
+  │                                     │
+  ├─ GET /challenge              ──────►│  returns random hex challenge
+  │                                     │
+  ├─ navigator.credentials.get()        │  (client signs challenge with passkey)
+  │    └─ assertion { signature, ... }  │
+  │                                     │
+  ├─ POST /publish { symbol_id,  ──────►│  1. verify WebAuthn assertion
+  │      alias, public_key, proof }     │  2. re-derive symbol_id from public_key
+  │                                     │  3. confirm match
+  │                                     │  4. store entry
+  │◄─────────────────────────────────── │  201 Created
+```
+
+The server re-derives the symbol ID from the submitted public key and rejects the request if it does not match. This makes it impossible to publish a symbol ID you do not own.
+
+---
+
+## Symbol Pool
+
+- **Source:** `data/unicode_pool.py`
+- **Size:** ~5,390 symbols
+- **Exclusions:** religious, political, national flags, gendered symbols, human faces
+- **Capacity:** 5390³ ≈ 156 billion unique combinations
+
+See [specs/unicode-pool.md](../specs/unicode-pool.md) for full curation rules.
+
+---
+
+## Deployment
+
+### PWA
+
+Deployed automatically to GitHub Pages on every push to `main` that touches `pwa/**`, `data/**`, or `docs/**`. The workflow builds a combined site:
+
+- `/` → landing page (`docs/index.html`)
+- `/app/` → PWA files
+
+### Discovery Server
+
+```bash
+docker compose up   # starts postgres + discovery server
+```
+
+See [discovery-server.md](./discovery-server.md) for configuration and API reference.

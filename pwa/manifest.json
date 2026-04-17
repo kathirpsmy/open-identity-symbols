@@ -1,0 +1,23 @@
+{
+  "name": "Open Identity Symbols",
+  "short_name": "OIS",
+  "description": "Generate a globally unique symbolic identity secured by a passkey on your device.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0f0f13",
+  "theme_color": "#7c6ef7",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

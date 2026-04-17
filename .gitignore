@@ -14,9 +14,8 @@ build/
 .env
 *.env
 
-# Node
-frontend/web/node_modules/
-frontend/web/dist/
+# GitHub Pages build output
+_site/
 
 # OS
 .DS_Store
