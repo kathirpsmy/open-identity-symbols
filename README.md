@@ -2,7 +2,7 @@
 
 > Your identity as three symbols — derived from a key only your device holds.
 
-**[Try it live →](https://kathirpsmy.github.io/open-identity-symbols/app/)**
+**[Try it live →](https://PRYSYM.github.io/open-identity-symbols/app/)**
 
 OIS is an open-source identity system that generates a globally unique, human-readable ID — three Unicode symbols — secured by a passkey on your device. No accounts. No servers. Works offline.
 
@@ -58,7 +58,7 @@ open-identity-symbols/
 
 The PWA is hosted on GitHub Pages — no setup needed:
 
-**[https://kathirpsmy.github.io/open-identity-symbols/app/](https://kathirpsmy.github.io/open-identity-symbols/app/)**
+**[https://PRYSYM.github.io/open-identity-symbols/app/](https://PRYSYM.github.io/open-identity-symbols/app/)**
 
 It works on any modern browser with WebAuthn support (Chrome, Safari, Firefox, Edge). On mobile, your fingerprint or face ID secures the passkey.
 
@@ -72,7 +72,7 @@ The PWA is static HTML/JS — no build tool, no bundler. You need a local HTTP s
 
 ```bash
 # 1. Clone and enter the repo
-git clone https://github.com/kathirpsmy/open-identity-symbols
+git clone https://github.com/PRYSYM/open-identity-symbols
 cd open-identity-symbols
 
 # 2. Create and activate a virtual environment
@@ -97,7 +97,7 @@ Then open **[http://localhost:8080](http://localhost:8080)** in your browser.
 The discovery server is optional. It lets users publish their symbol ID so others can look them up. Anyone can run their own instance.
 
 ```bash
-git clone https://github.com/kathirpsmy/open-identity-symbols
+git clone https://github.com/PRYSYM/open-identity-symbols
 cd open-identity-symbols
 docker compose up
 ```

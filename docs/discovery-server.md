@@ -9,7 +9,7 @@ The discovery server is an optional, self-hosted component that lets users publi
 The repository ships a `docker-compose.yml` that starts PostgreSQL and the discovery server with a single command.
 
 ```bash
-git clone https://github.com/kathirpsmy/open-identity-symbols
+git clone https://github.com/PRYSYM/open-identity-symbols
 cd open-identity-symbols
 docker compose up -d
 ```
