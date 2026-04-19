@@ -23,7 +23,7 @@ services:
       - "8001:8001"
     environment:
       DATABASE_URL: postgresql://ois:ois@postgres/ois_discovery
-      CORS_ORIGINS: "http://localhost:8080,https://kathirpsmy.github.io"
+      CORS_ORIGINS: "http://localhost:8080,https://PRYSYM.github.io"
     depends_on:
       postgres:
         condition: service_healthy
