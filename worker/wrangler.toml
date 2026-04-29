@@ -1,0 +1,14 @@
+name               = "ois-discovery"
+main               = "src/index.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding       = "DB"
+database_name = "ois-discovery"
+database_id   = "11fe4e09-ce40-4437-9e2f-87b830362017"  # Step 4 of README: wrangler d1 create ois-discovery
+
+# Secrets (set via `wrangler secret put`):
+#   WEBAUTHN_VERIFY_ORIGIN  → "true" in prod, "false" for local testing
+#   ALLOWED_ORIGINS         → "https://PRYSYM.github.io,http://localhost:8080"
+#   CHALLENGE_TTL_SECONDS   → "300"

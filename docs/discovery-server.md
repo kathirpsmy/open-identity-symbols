@@ -1,10 +1,52 @@
-# Discovery Server — Self-Hosting Guide
+# Discovery Server — Hosting Guide
 
-The discovery server is an optional, self-hosted component that lets users publish their passkey-derived symbol identity so others can look them up. Multiple servers can run independently without symbol collisions, and they can be merged into a single database at any time.
+The discovery server is an optional component that lets users publish their passkey-derived symbol identity so others can look them up. Multiple servers can run independently without symbol collisions, and they can be merged into a single database at any time.
+
+Two deployment options:
+
+| Option | Stack | Cost | Best for |
+|--------|-------|------|----------|
+| **Cloudflare Worker** | Worker + D1 (SQLite) | Free tier | PRYSYM-hosted registry, quick personal instances |
+| **Docker Compose**   | FastAPI + PostgreSQL  | VPS/cloud  | Full control, custom auth, high write volume |
+
+Both implement the same REST API — the PWA works with either.
 
 ---
 
-## Quick Start (Docker Compose)
+## Option 1 — Cloudflare Worker (Recommended, Zero Cost)
+
+The `worker/` directory contains a Cloudflare Worker that runs the complete discovery API on Cloudflare's free tier.
+
+**Free tier limits:** 100k requests/day · 5M D1 reads/day · 100k writes/day · 5GB storage
+
+### Deploy
+
+```bash
+# Prerequisites: Cloudflare account, wrangler CLI, wrangler login
+cd worker
+npm install
+wrangler d1 create ois-discovery    # → copy database_id into wrangler.toml
+wrangler d1 execute ois-discovery --file=schema.sql
+wrangler secret put WEBAUTHN_VERIFY_ORIGIN   # → true
+wrangler secret put ALLOWED_ORIGINS          # → https://PRYSYM.github.io,http://localhost:8080
+wrangler deploy
+```
+
+See [../worker/README.md](../worker/README.md) for the full step-by-step guide.
+
+### Local dev
+
+```bash
+wrangler dev --local
+wrangler d1 execute ois-discovery --local --file=schema.sql
+# → http://localhost:8787
+```
+
+---
+
+## Option 2 — Docker Compose (Self-Hosted)
+
+### Quick Start
 
 The repository ships a `docker-compose.yml` that starts PostgreSQL and the discovery server with a single command.
 

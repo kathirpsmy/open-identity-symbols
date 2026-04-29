@@ -351,7 +351,11 @@ async function handleReset() {
 
 const SERVER_KEY = "ois_server_url_v1";
 
-function getServerUrl()          { return localStorage.getItem(SERVER_KEY) || ""; }
+// Update this after deploying the Cloudflare Worker (Step 5 of worker/README.md).
+// Users can always override via Server Config in the UI.
+const DEFAULT_SERVER_URL = "https://ois-discovery.kathirpsmy.workers.dev";
+
+function getServerUrl()          { return localStorage.getItem(SERVER_KEY) || DEFAULT_SERVER_URL; }
 function setServerUrl(url)       { if (url) localStorage.setItem(SERVER_KEY, url); else localStorage.removeItem(SERVER_KEY); }
 
 function fromBase64Url(s) {
