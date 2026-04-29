@@ -408,7 +408,7 @@ async function handleSearch(request, env) {
 
 // ─── Router ───────────────────────────────────────────────────────────────────
 
-async function handleRequest(request, env) {
+async function route(request, env) {
   const url    = new URL(request.url);
   const path   = url.pathname;
   const method = request.method;
@@ -417,7 +417,7 @@ async function handleRequest(request, env) {
     return new Response(null, { status: 204, headers: corsHeaders(request, env) });
   }
 
-  if (path === '/health')                     return handleHealth(request, env);
+  if (path === '/health')                         return handleHealth(request, env);
   if (path === '/challenge' && method === 'GET')  return handleChallenge(request, env);
   if (path === '/publish'   && method === 'POST') return handlePublish(request, env);
   if (path === '/profile'   && method === 'PUT')  return handleProfile(request, env);
@@ -437,6 +437,18 @@ async function handleRequest(request, env) {
   if (symbolMatch) return handleLookupSymbol(decodeURIComponent(symbolMatch[1]), request, env);
 
   return errResp(request, env, `Not found: ${path}`, 404);
+}
+
+async function handleRequest(request, env) {
+  try {
+    return await route(request, env);
+  } catch (e) {
+    console.error('Unhandled worker error:', e?.stack ?? e);
+    return new Response(JSON.stringify({ detail: 'Internal server error', error: e?.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders(request, env) },
+    });
+  }
 }
 
 export default { fetch: handleRequest };
