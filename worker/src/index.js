@@ -162,7 +162,7 @@ async function verifyAssertion(spkiB64url, cdJsonB64url, authDataB64url, sigB64u
 
 function resolveOrigin(request, env) {
   const origin  = request.headers.get('Origin') || '';
-  const allowed = (env.ALLOWED_ORIGINS || 'https://PRYSYM.github.io').split(',').map(s => s.trim());
+  const allowed = (env.ALLOWED_ORIGINS || 'https://prysym.github.io').split(',').map(s => s.trim());
   if (allowed.includes(origin)) return origin;
   if (origin.startsWith('http://localhost:')) return origin;
   return allowed[0];
