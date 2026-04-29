@@ -38,7 +38,12 @@ open-identity-symbols/
 │   └── scripts/
 │       ├── export_data.py      # Generates pool.js + alias.js from data/
 │       └── test_derivation.mjs # Node.js derivation test
-├── discovery/        # Optional self-hosted discovery server (FastAPI)
+├── worker/           # Cloudflare Worker + D1 discovery server (PRYSYM-hosted)
+│   ├── src/index.js  # Worker — all endpoints, WebAuthn verify, symbol re-derivation
+│   ├── schema.sql    # D1 DDL
+│   ├── wrangler.toml # Cloudflare config
+│   └── tests/        # Vitest integration tests (Miniflare)
+├── discovery/        # Self-hostable discovery server (FastAPI + PostgreSQL)
 │   ├── api/          # /challenge  /publish  /lookup  /search
 │   ├── services/     # Symbol derivation, WebAuthn verification
 │   └── tests/        # pytest test suite
@@ -92,9 +97,23 @@ Then open **[http://localhost:8080](http://localhost:8080)** in your browser.
 
 ---
 
+## Hosted Discovery Server (PRYSYM)
+
+PRYSYM runs a public discovery server on Cloudflare Workers + D1 (free tier):
+
+**`https://ois-discovery.kathirpsmy.workers.dev`**
+
+The PWA connects to it by default. You can also point the PWA at any self-hosted instance via **Server Config** in the UI.
+
+---
+
 ## Self-Host the Discovery Server
 
 The discovery server is optional. It lets users publish their symbol ID so others can look them up. Anyone can run their own instance.
+
+**Option 1 — Cloudflare Worker (zero cost):** see [worker/README.md](worker/README.md).
+
+**Option 2 — Docker Compose (self-hosted):**
 
 ```bash
 git clone https://github.com/PRYSYM/open-identity-symbols

@@ -1,8 +1,12 @@
 # Discovery Server API
 
-Base URL: `http://localhost:8001` (self-hosted default)
+| Instance | Base URL |
+|----------|----------|
+| PRYSYM hosted (Cloudflare Worker) | `https://ois-discovery.kathirpsmy.workers.dev`|
+| Self-hosted default (Docker) | `http://localhost:8001` |
 
-Interactive docs available at `/docs` (Swagger UI) and `/redoc` when the server is running.
+The Cloudflare Worker and the FastAPI self-host implement the same REST API contract.
+FastAPI also exposes interactive docs at `/docs` (Swagger UI) when running.
 
 ---
 
@@ -108,10 +112,16 @@ Returns up to 20 results ordered by relevance.
 
 ## Running Locally
 
+**Cloudflare Worker:**
+```bash
+cd worker && wrangler dev --local
+# → http://localhost:8787
+```
+
+**Docker Compose (FastAPI):**
 ```bash
 docker compose up
-# Discovery API: http://localhost:8001
-# Swagger UI:    http://localhost:8001/docs
+# → http://localhost:8001  (Swagger UI: /docs)
 ```
 
 See [discovery-server.md](./discovery-server.md) for full setup guide.
