@@ -233,7 +233,7 @@ async function assertPasskey() {
 const ALL_STATES = [
   "landing", "generating", "retrieving", "result", "error",
   "publishing", "publish-success", "publish-error",
-  "search", "server-config", "recovery",
+  "search", "server-config", "recovery", "deleting",
 ];
 
 function showState(state) {
@@ -615,6 +615,81 @@ async function recoveryFromDiscovery() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Phase 3 — Self-delete from discovery server
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function deleteIdentity() {
+  const serverUrl = getServerUrl().replace(/\/$/, "");
+  const identity  = lsLoad();
+  if (!identity?.symbolId) { showState("landing"); return; }
+  if (!serverUrl) {
+    showError("No discovery server configured. Use Configure server to set one.");
+    return;
+  }
+
+  const confirmed = confirm(
+    "Remove your identity from the discovery server?\n\n" +
+    "Your passkey and local identity data will also be deleted from this device. " +
+    "This cannot be undone. Continue?"
+  );
+  if (!confirmed) return;
+
+  showState("deleting");
+  try {
+    const challengeRes = await fetch(`${serverUrl}/challenge`);
+    if (!challengeRes.ok) throw new Error(`Server returned ${challengeRes.status} for /challenge`);
+    const { token } = await challengeRes.json();
+
+    const hexBytes = new Uint8Array(token.match(/.{2}/g).map((b) => parseInt(b, 16)));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge: hexBytes,
+        allowCredentials: [{ id: fromBase64Url(identity.credentialId), type: "public-key" }],
+        userVerification: "required",
+      },
+    });
+    if (!assertion) throw new Error("Passkey authentication cancelled.");
+
+    const res = await fetch(`${serverUrl}/identity`, {
+      method:  "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        symbol_id:       identity.symbolId,
+        challenge_token: token,
+        assertion: {
+          credential_id:      identity.credentialId,
+          client_data_json:   toBase64Url(new Uint8Array(assertion.response.clientDataJSON)),
+          authenticator_data: toBase64Url(new Uint8Array(assertion.response.authenticatorData)),
+          signature:          toBase64Url(new Uint8Array(assertion.response.signature)),
+        },
+      }),
+    });
+
+    if (res.status === 204) {
+      await forgetIdentity(identity.credentialId);
+      showState("landing");
+      return;
+    }
+
+    const errData = await res.json().catch(() => ({}));
+    if (res.status === 404) {
+      renderResult(identity);
+      alert("Identity not found on this server — it may have already been removed.");
+      return;
+    }
+    throw new Error(errData.detail || `Server error ${res.status}`);
+
+  } catch (err) {
+    console.error("Delete failed:", err);
+    if (err.name === "NotAllowedError") {
+      renderResult(identity);
+    } else {
+      showError(err.message || "Delete failed.");
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Render result (updated to show publish/server status)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -672,6 +747,7 @@ async function boot() {
   document.getElementById("btn-server-config-cancel").addEventListener("click", () => { const s = lsLoad(); if (s?.symbolId) renderResult(s); else showState("landing"); });
 
   // Wire recovery buttons
+  document.getElementById("btn-delete-identity").addEventListener("click", deleteIdentity);
   document.getElementById("btn-recovery-open")  .addEventListener("click", openRecovery);
   document.getElementById("btn-recovery-go")    .addEventListener("click", recoveryFromDiscovery);
   document.getElementById("btn-recovery-cancel").addEventListener("click", () => showState("landing"));

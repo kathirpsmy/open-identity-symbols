@@ -171,8 +171,8 @@ function resolveOrigin(request, env) {
 function corsHeaders(request, env) {
   return {
     'Access-Control-Allow-Origin':  resolveOrigin(request, env),
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 }
 
@@ -406,6 +406,131 @@ async function handleSearch(request, env) {
   return jsonResp(request, env, { results: results.map(rowToPublic), total, limit, offset });
 }
 
+// ─── Admin auth ──────────────────────────────────────────────────────────────
+
+function requireAdmin(request, env) {
+  const auth = request.headers.get('Authorization') || '';
+  const key  = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  if (!env.ADMIN_API_KEY || key !== env.ADMIN_API_KEY)
+    return errResp(request, env, 'Unauthorized', 401);
+  return null;
+}
+
+// ─── Admin handlers ──────────────────────────────────────────────────────────
+
+async function handleAdminStats(request, env) {
+  const authErr = requireAdmin(request, env);
+  if (authErr) return authErr;
+
+  const total = (await env.DB.prepare('SELECT COUNT(*) AS n FROM identities').first())?.n ?? 0;
+
+  const todayRow = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM identities WHERE DATE(published_at) = DATE('now')"
+  ).first();
+  const today = todayRow?.n ?? 0;
+
+  const last7dRow = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM identities WHERE published_at >= datetime('now', '-7 days')"
+  ).first();
+  const last7d = last7dRow?.n ?? 0;
+
+  const last30dRow = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM identities WHERE published_at >= datetime('now', '-30 days')"
+  ).first();
+  const last30d = last30dRow?.n ?? 0;
+
+  const recentRow = await env.DB.prepare(
+    'SELECT published_at FROM identities ORDER BY published_at DESC LIMIT 1'
+  ).first();
+  const mostRecent = recentRow?.published_at ?? null;
+
+  return jsonResp(request, env, {
+    total_identities:       total,
+    registrations_today:    today,
+    registrations_last_7d:  last7d,
+    registrations_last_30d: last30d,
+    most_recent:            mostRecent,
+  });
+}
+
+async function handleAdminIdentities(request, env) {
+  const authErr = requireAdmin(request, env);
+  if (authErr) return authErr;
+
+  const url    = new URL(request.url);
+  const limit  = Math.min(Math.max(parseInt(url.searchParams.get('limit')  || '20', 10), 1), 100);
+  const offset = Math.max(parseInt(url.searchParams.get('offset') || '0',  10), 0);
+  const q      = url.searchParams.get('q') || '';
+
+  let results, total;
+  if (q) {
+    const pattern = `%${q}%`;
+    ({ results } = await env.DB.prepare(
+      'SELECT * FROM identities WHERE symbol_id LIKE ? OR alias LIKE ? ORDER BY published_at DESC LIMIT ? OFFSET ?'
+    ).bind(pattern, pattern, limit, offset).all());
+    const countRow = await env.DB.prepare(
+      'SELECT COUNT(*) AS total FROM identities WHERE symbol_id LIKE ? OR alias LIKE ?'
+    ).bind(pattern, pattern).first();
+    total = countRow?.total ?? 0;
+  } else {
+    ({ results } = await env.DB.prepare(
+      'SELECT * FROM identities ORDER BY published_at DESC LIMIT ? OFFSET ?'
+    ).bind(limit, offset).all());
+    const countRow = await env.DB.prepare('SELECT COUNT(*) AS total FROM identities').first();
+    total = countRow?.total ?? 0;
+  }
+
+  return jsonResp(request, env, { results: results.map(rowToPublic), total, limit, offset });
+}
+
+async function handleAdminDeleteIdentity(symbolId, request, env) {
+  const authErr = requireAdmin(request, env);
+  if (authErr) return authErr;
+
+  const row = await env.DB.prepare('SELECT symbol_id FROM identities WHERE symbol_id = ?')
+    .bind(symbolId).first();
+  if (!row) return errResp(request, env, `Symbol '${symbolId}' not found`, 404);
+
+  await env.DB.prepare('DELETE FROM identities WHERE symbol_id = ?').bind(symbolId).run();
+  return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+}
+
+async function handleSelfDelete(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return errResp(request, env, 'Invalid JSON body', 400); }
+
+  const { symbol_id, challenge_token, assertion } = body ?? {};
+  if (!symbol_id || !challenge_token || !assertion)
+    return errResp(request, env, 'Missing required fields: symbol_id, challenge_token, assertion', 422);
+  if (!assertion.client_data_json || !assertion.authenticator_data || !assertion.signature)
+    return errResp(request, env, 'assertion must include client_data_json, authenticator_data, signature', 422);
+
+  const row = await env.DB.prepare('SELECT * FROM identities WHERE symbol_id = ?')
+    .bind(symbol_id).first();
+  if (!row) return errResp(request, env, `Symbol '${symbol_id}' not found on this server`, 404);
+
+  try { await consumeChallenge(challenge_token, env); }
+  catch (e) { return errResp(request, env, e.detail, e.status); }
+
+  const doVerify = (env.WEBAUTHN_VERIFY_ORIGIN ?? 'true') === 'true';
+  try {
+    await verifyAssertion(
+      row.public_key_spki,
+      assertion.client_data_json,
+      assertion.authenticator_data,
+      assertion.signature,
+      challenge_token,
+      row.origin,
+      doVerify,
+    );
+  } catch (e) {
+    return errResp(request, env, `Assertion verification failed: ${e.message}`, 401);
+  }
+
+  await env.DB.prepare('DELETE FROM identities WHERE symbol_id = ?').bind(symbol_id).run();
+  return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 async function route(request, env) {
@@ -435,6 +560,14 @@ async function route(request, env) {
 
   const symbolMatch = path.match(/^\/lookup\/(.+)$/);
   if (symbolMatch) return handleLookupSymbol(decodeURIComponent(symbolMatch[1]), request, env);
+
+  if (path === '/admin/stats'      && method === 'GET')    return handleAdminStats(request, env);
+  if (path === '/admin/identities' && method === 'GET')    return handleAdminIdentities(request, env);
+  if (path === '/identity'         && method === 'DELETE') return handleSelfDelete(request, env);
+
+  const adminDeleteMatch = path.match(/^\/admin\/identity\/(.+)$/);
+  if (adminDeleteMatch && method === 'DELETE')
+    return handleAdminDeleteIdentity(decodeURIComponent(adminDeleteMatch[1]), request, env);
 
   return errResp(request, env, `Not found: ${path}`, 404);
 }

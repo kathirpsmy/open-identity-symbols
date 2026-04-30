@@ -141,6 +141,12 @@
       transition: background 0.15s;
     }
     .btn-icon:hover { background: #2e2e4a; color: var(--text); }
+    .btn-danger {
+      background: rgba(224, 92, 92, 0.08);
+      color: var(--danger);
+      border: 1px solid rgba(224, 92, 92, 0.25);
+    }
+    .btn-danger:hover { background: rgba(224, 92, 92, 0.15); }
 
     /* ── Symbol display ── */
     .symbol-id {
@@ -449,6 +455,10 @@
     <button id="btn-reset" class="btn btn-ghost" style="font-size:0.78rem; color: var(--danger); border-color: rgba(224,92,92,0.3);">
       Generate a new identity
     </button>
+
+    <button id="btn-delete-identity" class="btn btn-danger" style="font-size:0.82rem; width:100%;">
+      Delete my identity
+    </button>
   </section>
 
   <!-- ── STATE: error ── -->
@@ -471,6 +481,12 @@
     <div class="spinner" role="status" aria-label="Publishing"></div>
     <p>Use your passkey to sign the publication request&hellip;</p>
     <p style="font-size:0.82rem;">Your symbol will be findable by anyone on this discovery server.</p>
+  </section>
+
+  <!-- ── STATE: deleting ── -->
+  <section id="state-deleting" class="card hidden" aria-live="polite">
+    <div class="spinner" role="status" aria-label="Deleting"></div>
+    <p>Use your passkey to confirm deletion&hellip;</p>
   </section>
 
   <!-- ── STATE: publish-success ── -->

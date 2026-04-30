@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from discovery.config import settings
 from discovery import database as _db
-from discovery.api import challenge, lookup, publish, search
+from discovery.api import admin, challenge, lookup, publish, search, self_delete
 
 
 @asynccontextmanager
@@ -44,8 +44,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins     = origins,
     allow_credentials = False,    # no cookies used
-    allow_methods     = ["GET", "POST", "PUT"],
-    allow_headers     = ["Content-Type"],
+    allow_methods     = ["GET", "POST", "PUT", "DELETE"],
+    allow_headers     = ["Content-Type", "Authorization"],
 )
 
 # Routes
@@ -53,6 +53,8 @@ app.include_router(challenge.router)
 app.include_router(publish.router)
 app.include_router(lookup.router)
 app.include_router(search.router)
+app.include_router(admin.router)
+app.include_router(self_delete.router)
 
 
 @app.get("/health", tags=["meta"])
