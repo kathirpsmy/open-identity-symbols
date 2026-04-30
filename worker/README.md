@@ -127,6 +127,39 @@ They use real P-256 key pairs and proper DER-encoded ECDSA signatures.
 
 ---
 
+## Admin Setup
+
+### 1. Generate a key
+
+```bash
+openssl rand -hex 32
+```
+
+### 2. Set the secret
+
+```bash
+cd worker
+wrangler secret put ADMIN_API_KEY
+# → paste the key from step 1
+```
+
+Keep this key out of version control. The dashboard reads it from your browser's `localStorage` only.
+
+### 3. Open the dashboard
+
+Navigate to `https://PRYSYM.github.io/open-identity-symbols/admin.html`, enter your worker URL and API key, and click **Connect**.
+
+### Admin endpoints
+
+| Method | Path | Auth |
+|--------|------|------|
+| `GET` | `/admin/stats` | Bearer token |
+| `GET` | `/admin/identities?limit=&offset=&q=` | Bearer token |
+| `DELETE` | `/admin/identity/:symbol_id` | Bearer token |
+| `DELETE` | `/identity` | WebAuthn assertion (user self-delete) |
+
+---
+
 ## Relationship to `discovery/` (FastAPI)
 
 `discovery/` is the self-hostable reference implementation (PostgreSQL, Docker).

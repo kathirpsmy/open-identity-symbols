@@ -113,6 +113,8 @@ The discovery server is optional. It lets users publish their symbol ID so other
 
 **Option 1 — Cloudflare Worker (zero cost):** see [worker/README.md](worker/README.md).
 
+The discovery server includes an **admin dashboard** at `/admin.html` — a static page for operators to view stats, browse registered identities, and delete entries. Set `ADMIN_API_KEY` via `wrangler secret put` (CF Worker) or `.env` (self-hosted). See [worker/README.md](worker/README.md#admin-setup).
+
 **Option 2 — Docker Compose (self-hosted):**
 
 ```bash

@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Set to False in dev if you need to cross origins during testing.
     WEBAUTHN_VERIFY_ORIGIN: bool = True
 
+    # Admin API key for protected admin endpoints. Generate with: openssl rand -hex 32
+    ADMIN_API_KEY: str | None = None
+
     @property
     def cors_origins_list(self) -> list[str]:
         if self.CORS_ORIGINS.strip() == "*":

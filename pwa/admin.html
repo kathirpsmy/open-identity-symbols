@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OIS Admin Dashboard</title>
+  <meta name="description" content="Admin dashboard for OIS discovery server operators." />
+  <meta name="theme-color" content="#7c6ef7" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0f0f13;
+      --surface:    #1a1a24;
+      --surface-2:  #23233a;
+      --accent:     #7c6ef7;
+      --text:       #e8e8f0;
+      --text-muted: #8888aa;
+      --success:    #4caf82;
+      --danger:     #e05c5c;
+      --radius:     12px;
+      --font:       system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+    }
+    body { padding: 1.5rem 1rem 3rem; }
+    .page { max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+    header { padding-top: 1.5rem; }
+    header h1 { font-size: 1.3rem; font-weight: 700; }
+    header p { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+    .card h2 {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+    .config-row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; }
+    .input-group { display: flex; flex-direction: column; gap: 0.35rem; flex: 1; min-width: 200px; }
+    .input-group label { font-size: 0.78rem; color: var(--text-muted); }
+    .text-input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid #333355;
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem;
+      color: var(--text);
+      font-size: 0.92rem;
+    }
+    .text-input:focus { outline: 2px solid var(--accent); }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 0.5rem; padding: 0.65rem 1.5rem;
+      border-radius: var(--radius); border: none;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      transition: opacity 0.15s; white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--surface-2); font-size: 0.85rem;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--text-muted); }
+    .btn-ghost:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-danger {
+      background: rgba(224, 92, 92, 0.1); color: var(--danger);
+      border: 1px solid rgba(224, 92, 92, 0.3);
+      padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 600; border-radius: 6px;
+    }
+    .btn-danger:hover { background: rgba(224, 92, 92, 0.2); }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+    .stat-card { background: var(--surface-2); border-radius: 10px; padding: 1rem 1.2rem; }
+    .stat-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); line-height: 1.2; margin-top: 0.2rem; }
+    .toolbar { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .toolbar .text-input { flex: 1; min-width: 180px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th {
+      text-align: left; padding: 0.6rem 0.75rem;
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-muted);
+      border-bottom: 1px solid var(--surface-2);
+    }
+    td { padding: 0.7rem 0.75rem; border-bottom: 1px solid rgba(35,35,58,0.6); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    .symbol-cell { font-size: 1.25rem; letter-spacing: 0.08em; }
+    .alias-cell { font-family: "Courier New", monospace; color: var(--accent); font-size: 0.82rem; }
+    .origin-cell { color: var(--text-muted); font-size: 0.78rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .date-cell { color: var(--text-muted); font-size: 0.78rem; white-space: nowrap; }
+    .pagination { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); }
+    .status-msg { font-size: 0.85rem; min-height: 1.2em; margin-top: 0.75rem; }
+    .table-hint { color: var(--text-muted); font-size: 0.88rem; text-align: center; padding: 2rem; }
+    .hidden { display: none !important; }
+    footer { margin-top: 2rem; color: var(--text-muted); font-size: 0.74rem; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>⟡ OIS Admin Dashboard</h1>
+    <p>Manage identities on any OIS discovery server</p>
+  </header>
+
+  <!-- Config -->
+  <div class="card">
+    <h2>Server Configuration</h2>
+    <div class="config-row">
+      <div class="input-group">
+        <label for="server-url">Server URL</label>
+        <input id="server-url" class="text-input" type="url"
+          placeholder="https://ois-discovery.kathirpsmy.workers.dev" autocomplete="off" />
+      </div>
+      <div class="input-group">
+        <label for="api-key">Admin API Key</label>
+        <input id="api-key" class="text-input" type="password"
+          placeholder="Bearer key…" autocomplete="off" />
+      </div>
+      <button id="btn-connect" class="btn btn-primary">Connect</button>
+    </div>
+    <p id="connect-error" class="status-msg" style="color: var(--danger);"></p>
+  </div>
+
+  <!-- Stats -->
+  <div id="stats-section" class="card hidden">
+    <h2>Registry Stats</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total</div>
+        <div class="stat-value" id="stat-total">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Today</div>
+        <div class="stat-value" id="stat-today">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Last 7 days</div>
+        <div class="stat-value" id="stat-7d">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Last 30 days</div>
+        <div class="stat-value" id="stat-30d">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Identities table -->
+  <div id="identities-section" class="card hidden">
+    <h2>Identities</h2>
+    <div class="toolbar">
+      <input id="search-input" class="text-input" type="search"
+        placeholder="Filter by symbol or alias…" autocomplete="off" />
+      <button id="btn-refresh" class="btn btn-ghost">Refresh</button>
+    </div>
+    <div id="table-wrap">
+      <p class="table-hint">No identities loaded.</p>
+    </div>
+    <div id="pagination" class="pagination hidden">
+      <button id="btn-prev" class="btn btn-ghost">← Prev</button>
+      <span id="page-info"></span>
+      <button id="btn-next" class="btn btn-ghost">Next →</button>
+    </div>
+  </div>
+
+</div><!-- .page -->
+
+<footer>
+  OIS Admin — static dashboard, no server-side session.
+  Admin key stored in <code>localStorage</code> on your device only.
+</footer>
+
+<script>
+const ADMIN_CONFIG_KEY = 'ois_admin_config_v1';
+const PAGE_LIMIT = 20;
+
+let cfg = { serverUrl: '', apiKey: '' };
+let tableState = { offset: 0, total: 0, query: '' };
+let debounceTimer = null;
+
+function loadConfig() {
+  try { return JSON.parse(localStorage.getItem(ADMIN_CONFIG_KEY)) || {}; } catch { return {}; }
+}
+
+function saveConfig() {
+  localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify({ serverUrl: cfg.serverUrl, apiKey: cfg.apiKey }));
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function setConnectError(msg) { document.getElementById('connect-error').textContent = msg; }
+function clearConnectError()  { document.getElementById('connect-error').textContent = ''; }
+
+async function connect() {
+  cfg.serverUrl = document.getElementById('server-url').value.trim().replace(/\/$/, '');
+  cfg.apiKey    = document.getElementById('api-key').value.trim();
+  clearConnectError();
+
+  if (!cfg.serverUrl)                          { setConnectError('Enter a server URL.'); return; }
+  if (!cfg.apiKey)                             { setConnectError('Enter an API key.'); return; }
+  if (!cfg.serverUrl.startsWith('http'))       { setConnectError('Server URL must start with http:// or https://'); return; }
+
+  saveConfig();
+  tableState = { offset: 0, total: 0, query: '' };
+  document.getElementById('search-input').value = '';
+  await loadAll();
+}
+
+async function loadAll() {
+  await Promise.all([loadStats(), loadIdentities()]);
+}
+
+async function apiGet(path) {
+  const res = await fetch(`${cfg.serverUrl}${path}`, {
+    headers: { 'Authorization': `Bearer ${cfg.apiKey}` },
+  });
+  if (res.status === 401) throw new Error('Invalid API key — check your admin credentials.');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Server error ${res.status}`);
+  }
+  return res.json();
+}
+
+async function loadStats() {
+  try {
+    const data = await apiGet('/admin/stats');
+    document.getElementById('stat-total').textContent = data.total_identities;
+    document.getElementById('stat-today').textContent = data.registrations_today;
+    document.getElementById('stat-7d').textContent    = data.registrations_last_7d;
+    document.getElementById('stat-30d').textContent   = data.registrations_last_30d;
+    document.getElementById('stats-section').classList.remove('hidden');
+  } catch (err) {
+    setConnectError(err.message);
+    document.getElementById('stats-section').classList.add('hidden');
+    document.getElementById('identities-section').classList.add('hidden');
+  }
+}
+
+async function loadIdentities() {
+  const params = new URLSearchParams({ limit: PAGE_LIMIT, offset: tableState.offset });
+  if (tableState.query) params.set('q', tableState.query);
+
+  try {
+    const data = await apiGet(`/admin/identities?${params}`);
+    tableState.total = data.total;
+    renderTable(data);
+    document.getElementById('identities-section').classList.remove('hidden');
+  } catch (err) {
+    setConnectError(err.message);
+  }
+}
+
+function renderTable(data) {
+  const wrap = document.getElementById('table-wrap');
+
+  if (!data.results.length) {
+    wrap.innerHTML = '<p class="table-hint">No identities found.</p>';
+    document.getElementById('pagination').classList.add('hidden');
+    return;
+  }
+
+  const rows = data.results.map(r => `
+    <tr>
+      <td class="symbol-cell">${escapeHtml(r.symbol_id)}</td>
+      <td class="alias-cell">${escapeHtml(r.alias)}</td>
+      <td class="origin-cell" title="${escapeHtml(r.origin)}">${escapeHtml(r.origin || '—')}</td>
+      <td class="date-cell">${r.published_at ? new Date(r.published_at).toLocaleDateString() : '—'}</td>
+      <td><button class="btn btn-danger" onclick="deleteIdentity(${JSON.stringify(r.symbol_id)})">Delete</button></td>
+    </tr>
+  `).join('');
+
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Symbol</th><th>Alias</th><th>Origin</th><th>Published</th><th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  const pagination = document.getElementById('pagination');
+  const start = tableState.offset + 1;
+  const end   = Math.min(tableState.offset + data.results.length, data.total);
+  document.getElementById('page-info').textContent =
+    data.total > PAGE_LIMIT ? `${start}–${end} of ${data.total}` : `${data.total} total`;
+  document.getElementById('btn-prev').disabled = tableState.offset === 0;
+  document.getElementById('btn-next').disabled = tableState.offset + PAGE_LIMIT >= data.total;
+  pagination.classList.remove('hidden');
+}
+
+async function deleteIdentity(symbolId) {
+  if (!confirm(`Delete identity "${symbolId}"?\n\nThis is permanent and cannot be undone.`)) return;
+
+  const res = await fetch(`${cfg.serverUrl}/admin/identity/${encodeURIComponent(symbolId)}`, {
+    method:  'DELETE',
+    headers: { 'Authorization': `Bearer ${cfg.apiKey}` },
+  });
+
+  if (res.status === 204) {
+    await loadAll();
+  } else {
+    const body = await res.json().catch(() => ({}));
+    alert(`Delete failed: ${body.detail || res.status}`);
+  }
+}
+
+function onSearch() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    tableState.query  = document.getElementById('search-input').value.trim();
+    tableState.offset = 0;
+    if (cfg.serverUrl && cfg.apiKey) loadIdentities();
+  }, 350);
+}
+
+function prevPage() { tableState.offset = Math.max(0, tableState.offset - PAGE_LIMIT); loadIdentities(); }
+function nextPage() { tableState.offset += PAGE_LIMIT; loadIdentities(); }
+
+// Wire events
+document.getElementById('btn-connect').addEventListener('click', connect);
+document.getElementById('btn-refresh').addEventListener('click', loadAll);
+document.getElementById('search-input').addEventListener('input', onSearch);
+document.getElementById('search-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    clearTimeout(debounceTimer);
+    tableState.query = e.target.value.trim();
+    tableState.offset = 0;
+    if (cfg.serverUrl && cfg.apiKey) loadIdentities();
+  }
+});
+document.getElementById('btn-prev').addEventListener('click', prevPage);
+document.getElementById('btn-next').addEventListener('click', nextPage);
+
+// Restore saved config and auto-connect if both fields present
+const saved = loadConfig();
+if (saved.serverUrl) { document.getElementById('server-url').value = saved.serverUrl; cfg.serverUrl = saved.serverUrl; }
+if (saved.apiKey)    { document.getElementById('api-key').value    = saved.apiKey;    cfg.apiKey    = saved.apiKey;    }
+if (cfg.serverUrl && cfg.apiKey) loadAll();
+</script>
+</body>
+</html>
